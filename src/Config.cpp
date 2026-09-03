@@ -120,6 +120,19 @@ namespace
         ini.SetBoolValue("SoftShadows", "Enabled", section.enabled);
     }
 
+    void ReadFieldOfView(const CSimpleIniA& ini, Settings::FieldOfView& section)
+    {
+        section.customized = ini.KeyExists("FieldOfView", "Degrees");
+        section.degrees = static_cast<float>(ini.GetDoubleValue("FieldOfView", "Degrees", section.degrees));
+    }
+
+    // No key at all until the player actually moves the slider.
+    void WriteFieldOfView(CSimpleIniA& ini, const Settings::FieldOfView& section)
+    {
+        if (section.customized)
+            ini.SetDoubleValue("FieldOfView", "Degrees", section.degrees);
+    }
+
     void ReadAccessibility(const CSimpleIniA& ini, Settings::Accessibility& section)
     {
         section.colorblindMode =
@@ -180,6 +193,8 @@ namespace
 
         settings.upscaling.renderScale = std::clamp(settings.upscaling.renderScale, 0.5f, 1.0f);
 
+        settings.fieldOfView.degrees = std::clamp(settings.fieldOfView.degrees, 60.0f, 120.0f);
+
         auto& access = settings.accessibility;
         access.colorblindMode = std::min(access.colorblindMode, 4u);
         access.colorblindStrength = std::clamp(access.colorblindStrength, 0.0f, 1.0f);
@@ -209,6 +224,7 @@ namespace
         WritePostProcessing(ini, settings.postProcessing);
         WriteUpscaling(ini, settings.upscaling);
         WriteSoftShadows(ini, settings.softShadows);
+        WriteFieldOfView(ini, settings.fieldOfView);
         WriteAccessibility(ini, settings.accessibility);
         WriteReflex(ini, settings.reflex);
         ini.SetBoolValue("Debug", "Enabled", g_debugEnabled);
@@ -257,6 +273,7 @@ void LoadSettings()
         ReadPostProcessing(ini, g_editing.postProcessing);
         ReadUpscaling(ini, g_editing.upscaling);
         ReadSoftShadows(ini, g_editing.softShadows);
+        ReadFieldOfView(ini, g_editing.fieldOfView);
         ReadAccessibility(ini, g_editing.accessibility);
         ReadReflex(ini, g_editing.reflex);
         g_ignoreModConflicts = ini.GetBoolValue("General", "IgnoreModConflicts", false);

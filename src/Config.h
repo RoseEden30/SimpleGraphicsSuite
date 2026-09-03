@@ -70,6 +70,16 @@ struct Settings
         bool operator==(const SoftShadows&) const = default;
     } softShadows;
 
+    struct FieldOfView
+    {
+        // True once the player has picked a value - until then the game's
+        // own FOV is left untouched.
+        bool  customized = false;
+        float degrees = 75.0f;  // 60 to 120
+
+        bool operator==(const FieldOfView&) const = default;
+    } fieldOfView;
+
     struct Accessibility
     {
         // 0=Off, 1=Protanopia, 2=Deuteranopia, 3=Tritanopia, 4=Grayscale (debug).

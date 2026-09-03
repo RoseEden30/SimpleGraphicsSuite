@@ -9,6 +9,7 @@
 #include "Features/Accessibility.h"
 #include "Features/AntiAliasing.h"
 #include "Features/DLSS.h"
+#include "Features/FieldOfView.h"
 #include "Features/PostProcessing.h"
 #include "Features/Reflex.h"
 #include "Features/SoftShadows.h"
@@ -58,6 +59,8 @@ namespace
             Accessibility::InstallHooks();
             if (!Compatibility::IsSuppressed(Compatibility::kSoftShadows))
                 SoftShadows::InstallHooks();
+            if (!Compatibility::IsSuppressed(Compatibility::kFieldOfView))
+                FieldOfView::InstallHooks();
             // Its only reader is DLSS, and support is fixed for the session.
             if (DLSS::IsSupported())
                 FrameBufferCache::InstallHooks();

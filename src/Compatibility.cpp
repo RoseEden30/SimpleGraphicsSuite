@@ -17,6 +17,8 @@ namespace Compatibility
         // name and takes over the same pipeline.
         constexpr Entry kKnown[] = {
             { L"CommunityShaders.dll", "Community Shaders", kAntiAliasing | kPostProcessing | kReflex | kSoftShadows },
+            // Hooks the same TESCamera::Update call site to do the same job.
+            { L"FirstPersonFOV.dll", "First Person FOV and Tween Menu Fix", kFieldOfView },
         };
 
         struct Detection

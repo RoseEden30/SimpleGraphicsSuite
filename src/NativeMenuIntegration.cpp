@@ -100,6 +100,51 @@ namespace NativeMenuIntegration
             RequestSaveSettings();
         }
 
+        // Arrows, not a ScrollBar - a slider has exactly 21 stops, too coarse
+        // for 5-degree steps over this range.
+        constexpr float kFovSteps[] = { 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120 };
+
+        std::size_t FovIndexFor(float a_degrees)
+        {
+            std::size_t closest = 0;
+            for (std::size_t i = 1; i < std::size(kFovSteps); ++i) {
+                if (std::abs(a_degrees - kFovSteps[i]) < std::abs(a_degrees - kFovSteps[closest]))
+                    closest = i;
+            }
+            return closest;
+        }
+
+        std::vector<std::string> FovOptions()
+        {
+            std::vector<std::string> options;
+            for (float step : kFovSteps)
+                options.push_back(std::to_string(static_cast<int>(step)) + "\xC2\xB0");
+            return options;
+        }
+
+        // The live camera value until the player picks their own, so the
+        // arrows start wherever their FOV already is.
+        float __stdcall GetFieldOfViewDegrees()
+        {
+            const auto& fov = ActiveSettings()->fieldOfView;
+            float       degrees = fov.degrees;
+            if (!fov.customized) {
+                if (auto* camera = RE::PlayerCamera::GetSingleton())
+                    degrees = camera->GetRuntimeData2().worldFOV;
+            }
+            return static_cast<float>(FovIndexFor(degrees));
+        }
+        void __stdcall SetFieldOfViewDegrees(float a_value)
+        {
+            const auto index =
+                std::clamp(static_cast<std::size_t>(a_value), std::size_t{ 0 }, std::size(kFovSteps) - 1);
+            auto& fov = EditableSettings().fieldOfView;
+            fov.customized = true;
+            fov.degrees = kFovSteps[index];
+            PublishSettings();
+            RequestSaveSettings();
+        }
+
         // Off, then AMD's own FSR1 quality presets - matches the values
         // Upscaling.cpp's own render scale slider is documented against.
         constexpr float kUpscalePresets[] = { 1.0f, 0.77f, 0.67f, 0.58f, 0.50f };
@@ -451,6 +496,7 @@ namespace NativeMenuIntegration
         const bool antiAliasing = !Compatibility::IsSuppressed(Compatibility::kAntiAliasing);
         const bool reflex = !Compatibility::IsSuppressed(Compatibility::kReflex);
         const bool softShadows = !Compatibility::IsSuppressed(Compatibility::kSoftShadows);
+        const bool fieldOfView = !Compatibility::IsSuppressed(Compatibility::kFieldOfView);
 
         if (postProcessing) {
             AddVanillaSetting("Display", Type::kSlider, "$SGS_MOTION_BLUR", &GetMotionBlurStrength,
@@ -476,6 +522,12 @@ namespace NativeMenuIntegration
         if (softShadows) {
             AddVanillaSetting("Display", Type::kCheckbox, "$SGS_SOFT_SHADOWS", &GetSoftShadowsEnabled,
                 &SetSoftShadowsEnabled, 0.0f, {}, nullptr, nullptr, "$SGS_SOFT_SHADOWS_DESC", &OnSettingCommit);
+        }
+
+        if (fieldOfView) {
+            AddVanillaSetting("Display", Type::kDropdown, "$SGS_FIELD_OF_VIEW", &GetFieldOfViewDegrees,
+                &SetFieldOfViewDegrees, 3.0f, FovOptions(), nullptr, nullptr, "$SGS_FIELD_OF_VIEW_DESC",
+                &OnSettingCommit);
         }
 
         if (postProcessing) {
