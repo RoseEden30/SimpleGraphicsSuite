@@ -11,7 +11,7 @@ One DLL, one ini. The plugin runs on its own. If [NativeSystemMenuFramework](htt
 - **Render scale** - renders the 3D scene below native resolution through the engine's dynamic resolution, then reconstructs with FidelityFX FSR1 (EASU). Ignored under FXAA and DLAA, which both take the resolution back.
 - **Soft shadows** - scales the engine's own shadow softness with scene lighting: soft in dim/overcast light, sharp in direct sun, fixed indoors.
 - **Field of view** - overrides the game's own FOV live, left untouched until it's set.
-- **Accessibility** - protanopia, deuteranopia and tritanopia daltonization with adjustable strength, applied over the finished frame so it corrects the UI too.
+- **Accessibility** - protanopia, deuteranopia and tritanopia daltonization and a high contrast edge sharpening pass, both applied over the finished frame so they correct the UI too.
 - **NVIDIA Reflex** - low-latency mode and an optional frame cap through NVAPI. No effect on AMD or Intel.
 
 Anything switched off costs nothing at runtime.
