@@ -33,8 +33,8 @@ them before configuring:
 - `extern/Streamline` - an NVIDIA Streamline SDK release, keeping its `include/`
   and `bin/x64/` layout
 
-Run both from an **x64 Native Tools Command Prompt for VS 2022**, so the MSVC
-environment is set up.
+Run the two cmake commands from an **x64 Native Tools Command Prompt for
+VS 2022**, so the MSVC environment is set up.
 
 Set `SKYRIM_MODS_FOLDER` or `SKYRIM_FOLDER` to deploy on every build.
 
