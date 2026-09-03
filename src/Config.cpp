@@ -15,6 +15,7 @@ namespace
     // Ini-only, read once at startup - deliberately not part of Settings, so
     // it's untouched by Reset to defaults and never written back by the menu.
     bool g_debugEnabled = false;
+    bool g_ignoreModConflicts = false;
 
     std::vector<void (*)()> g_publishCallbacks;
 
@@ -193,6 +194,7 @@ namespace
         ini.LoadFile(path.string().c_str());
 
         WriteGeneral(ini, settings);
+        ini.SetBoolValue("General", "IgnoreModConflicts", g_ignoreModConflicts);
         WriteAntiAliasing(ini, settings.antiAliasing);
         WritePostProcessing(ini, settings.postProcessing);
         WriteUpscaling(ini, settings.upscaling);
@@ -245,6 +247,7 @@ void LoadSettings()
         ReadUpscaling(ini, g_editing.upscaling);
         ReadAccessibility(ini, g_editing.accessibility);
         ReadReflex(ini, g_editing.reflex);
+        g_ignoreModConflicts = ini.GetBoolValue("General", "IgnoreModConflicts", false);
         g_debugEnabled = ini.GetBoolValue("Debug", "Enabled", false);
         Validate(g_editing);
         logger::info("Settings loaded from {}", path.string());
@@ -291,6 +294,8 @@ void UpdateSettingsSave()
 void EnableSaveDebounce() { g_debounceSaves = true; }
 
 bool IsDebugEnabled() { return g_debugEnabled; }
+
+bool IsIgnoringModConflicts() { return g_ignoreModConflicts; }
 
 void SetDebugEnabled(bool a_enabled)
 {

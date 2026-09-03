@@ -1,3 +1,4 @@
+#include "Compatibility.h"
 #include "Config.h"
 #include "DeviceHook.h"
 #include "FrameBufferCache.h"
@@ -35,8 +36,10 @@ namespace
         case SKSE::MessagingInterface::kPostPostLoad:
             // Before shaders start loading, matching Community Shaders' own
             // timing for the same BSShader::LoadShaders hook.
-            AntiAliasing::InstallHooks();
-            PostProcessing::InstallHooks();
+            if (!Compatibility::IsSuppressed(Compatibility::kAntiAliasing))
+                AntiAliasing::InstallHooks();
+            if (!Compatibility::IsSuppressed(Compatibility::kPostProcessing))
+                PostProcessing::InstallHooks();
             break;
 
         case SKSE::MessagingInterface::kDataLoaded:
@@ -44,11 +47,13 @@ namespace
             // kPostPostLoad; Reflex needs them to detect the GPU and hook
             // Present. Every other plugin, NativeSystemMenuFramework included,
             // has also loaded by now.
-            Reflex::InstallHooks();
+            if (!Compatibility::IsSuppressed(Compatibility::kReflex))
+                Reflex::InstallHooks();
             // Whether the card supports DLAA is fixed for the session, so it
             // is settled here rather than behind a button the player has to
             // find and press before the status rows say anything.
-            DLSS::EnsureInitialized();
+            if (!Compatibility::IsSuppressed(Compatibility::kAntiAliasing))
+                DLSS::EnsureInitialized();
             Accessibility::InstallHooks();
             // Its only reader is DLSS, and support is fixed for the session.
             if (DLSS::IsSupported())

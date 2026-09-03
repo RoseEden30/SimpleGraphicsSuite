@@ -1,5 +1,6 @@
 #include "NativeMenuIntegration.h"
 
+#include "Compatibility.h"
 #include "Config.h"
 #include "Features/AntiAliasing.h"
 #include "Features/Debug.h"
@@ -326,6 +327,13 @@ namespace NativeMenuIntegration
 
         void __stdcall OnReloadShaders() { PostProcessing::ReloadShadersFromDisk(); }
 
+        void __stdcall GetCompatibilityLabel(char* a_buffer, int a_bufferSize)
+        {
+            std::snprintf(a_buffer, a_bufferSize, "%s: %s",
+                NativeSystemMenuFramework::Translate("$SGS_HANDLED_BY").c_str(),
+                std::string(Compatibility::DetectedNames()).c_str());
+        }
+
         void __stdcall GetVersionLabel(char* a_buffer, int a_bufferSize)
         {
             const auto* plugin = SKSE::PluginDeclaration::GetSingleton();
@@ -431,26 +439,38 @@ namespace NativeMenuIntegration
         using NativeSystemMenuFramework::AddVanillaSetting;
         using Type = NativeSystemMenuFramework::SettingType;
 
-        AddVanillaSetting("Display", Type::kSlider, "$SGS_MOTION_BLUR", &GetMotionBlurStrength,
-            &SetMotionBlurStrength, 0.0f, {}, nullptr, nullptr, "$SGS_MOTION_BLUR_DESC", &OnSettingCommit);
-        AddVanillaSetting("Display", Type::kSlider, "$SGS_VIGNETTE", &GetVignette, &SetVignette, 0.0f, {}, nullptr,
-            nullptr, "$SGS_VIGNETTE_DESC", &OnSettingCommit);
-        AddVanillaSetting("Display", Type::kCheckbox, "$SGS_VIGNETTE_SNEAK_ONLY", &GetVignetteSneakOnly,
-            &SetVignetteSneakOnly, 0.0f, {}, &IsVignetteSneakOnlyEnabled, nullptr,
-            "$SGS_VIGNETTE_SNEAK_ONLY_DESC", &OnSettingCommit);
-        AddVanillaSetting("Display", Type::kSlider, "$SGS_SHARPENING", &GetSharpening, &SetSharpening, 0.0f, {},
-            nullptr, nullptr, "$SGS_SHARPENING_DESC", &OnSettingCommit);
-        AddVanillaSetting("Display", Type::kDropdown, "$SGS_ANTI_ALIASING", &GetAntiAliasingMethod,
-            &SetAntiAliasingMethod, 1.0f, { "$SGS_OFF", "$SGS_TAA", "$SGS_FXAA", "$SGS_DLAA" }, nullptr, nullptr,
-            "$SGS_ANTI_ALIASING_DESC", &OnSettingCommit);
-        AddVanillaSetting("Display", Type::kSlider, "$SGS_TEXTURE_DEBLUR", &GetTextureDeblur, &SetTextureDeblur,
-            0.9f / kMaxDeblur, {}, &IsTextureDeblurEnabled, &FormatDecimal2,
-            "$SGS_TEXTURE_DEBLUR_DESC", &OnSettingCommit);
-        AddVanillaSetting("Display", Type::kDropdown, "$SGS_RENDER_RESOLUTION", &GetUpscalingPreset,
-            &SetUpscalingPreset, 0.0f,
-            { "$SGS_NATIVE_OFF", "$SGS_77_ULTRA_QUALITY", "$SGS_67_QUALITY", "$SGS_58_BALANCED", "$SGS_50_PERFORMANCE" },
-            &IsRenderResolutionEnabled, nullptr,
-            "$SGS_RENDER_RESOLUTION_DESC", &OnSettingCommit);
+        const bool postProcessing = !Compatibility::IsSuppressed(Compatibility::kPostProcessing);
+        const bool antiAliasing = !Compatibility::IsSuppressed(Compatibility::kAntiAliasing);
+        const bool reflex = !Compatibility::IsSuppressed(Compatibility::kReflex);
+
+        if (postProcessing) {
+            AddVanillaSetting("Display", Type::kSlider, "$SGS_MOTION_BLUR", &GetMotionBlurStrength,
+                &SetMotionBlurStrength, 0.0f, {}, nullptr, nullptr, "$SGS_MOTION_BLUR_DESC", &OnSettingCommit);
+            AddVanillaSetting("Display", Type::kSlider, "$SGS_VIGNETTE", &GetVignette, &SetVignette, 0.0f, {}, nullptr,
+                nullptr, "$SGS_VIGNETTE_DESC", &OnSettingCommit);
+            AddVanillaSetting("Display", Type::kCheckbox, "$SGS_VIGNETTE_SNEAK_ONLY", &GetVignetteSneakOnly,
+                &SetVignetteSneakOnly, 0.0f, {}, &IsVignetteSneakOnlyEnabled, nullptr,
+                "$SGS_VIGNETTE_SNEAK_ONLY_DESC", &OnSettingCommit);
+            AddVanillaSetting("Display", Type::kSlider, "$SGS_SHARPENING", &GetSharpening, &SetSharpening, 0.0f, {},
+                nullptr, nullptr, "$SGS_SHARPENING_DESC", &OnSettingCommit);
+        }
+
+        if (antiAliasing) {
+            AddVanillaSetting("Display", Type::kDropdown, "$SGS_ANTI_ALIASING", &GetAntiAliasingMethod,
+                &SetAntiAliasingMethod, 1.0f, { "$SGS_OFF", "$SGS_TAA", "$SGS_FXAA", "$SGS_DLAA" }, nullptr, nullptr,
+                "$SGS_ANTI_ALIASING_DESC", &OnSettingCommit);
+            AddVanillaSetting("Display", Type::kSlider, "$SGS_TEXTURE_DEBLUR", &GetTextureDeblur, &SetTextureDeblur,
+                0.9f / kMaxDeblur, {}, &IsTextureDeblurEnabled, &FormatDecimal2,
+                "$SGS_TEXTURE_DEBLUR_DESC", &OnSettingCommit);
+        }
+
+        if (postProcessing) {
+            AddVanillaSetting("Display", Type::kDropdown, "$SGS_RENDER_RESOLUTION", &GetUpscalingPreset,
+                &SetUpscalingPreset, 0.0f,
+                { "$SGS_NATIVE_OFF", "$SGS_77_ULTRA_QUALITY", "$SGS_67_QUALITY", "$SGS_58_BALANCED", "$SGS_50_PERFORMANCE" },
+                &IsRenderResolutionEnabled, nullptr,
+                "$SGS_RENDER_RESOLUTION_DESC", &OnSettingCommit);
+        }
 
         AddVanillaSetting("$SGS_ACCESSIBILITY_TAB", Type::kDropdown, "$SGS_COLORBLIND_MODE", &GetColorblindMode,
             &SetColorblindMode, 0.0f,
@@ -460,55 +480,61 @@ namespace NativeMenuIntegration
             &SetColorblindStrength, 1.0f, {}, &IsColorblindStrengthEnabled, nullptr,
             "$SGS_COLORBLIND_STRENGTH_DESC", &OnSettingCommit);
 
-        AddVanillaSetting("$SGS_PERFORMANCE_TAB", Type::kCheckbox, "$SGS_ENABLED", &GetReflexEnabled, &SetReflexEnabled, 1.0f, {},
-            nullptr, nullptr, "$SGS_REFLEX_ENABLED_DESC", &OnSettingCommit);
-        AddVanillaSetting("$SGS_PERFORMANCE_TAB", Type::kCheckbox, "$SGS_LOW_LATENCY_MODE", &GetReflexLowLatency,
-            &SetReflexLowLatency, 1.0f, {}, &IsReflexEnabled, nullptr,
-            "$SGS_LOW_LATENCY_MODE_DESC", &OnSettingCommit);
-        AddVanillaSetting("$SGS_PERFORMANCE_TAB", Type::kCheckbox, "$SGS_LOW_LATENCY_BOOST", &GetReflexBoost, &SetReflexBoost,
-            0.0f, {}, &IsReflexEnabled, nullptr,
-            "$SGS_LOW_LATENCY_BOOST_DESC", &OnSettingCommit);
-        AddVanillaSetting("$SGS_PERFORMANCE_TAB", Type::kCheckbox, "$SGS_USE_MARKERS_TO_OPTIMIZE", &GetReflexMarkers,
-            &SetReflexMarkers, 0.0f, {}, &IsReflexEnabled, nullptr,
-            "$SGS_USE_MARKERS_TO_OPTIMIZE_DESC", &OnSettingCommit);
-        AddVanillaSetting("$SGS_PERFORMANCE_TAB", Type::kCheckbox, "$SGS_ENABLE_FPS_LIMIT", &GetReflexFpsLimitEnabled,
-            &SetReflexFpsLimitEnabled, 0.0f, {}, &IsReflexEnabled, nullptr,
-            "$SGS_ENABLE_FPS_LIMIT_DESC", &OnSettingCommit);
-        // Default is 60 fps, which sits at index 3 of the preset table.
-        AddVanillaSetting("$SGS_PERFORMANCE_TAB", Type::kSlider, "$SGS_FPS_LIMIT", &GetReflexFpsLimit, &SetReflexFpsLimit,
-            3.0f / static_cast<float>(kFpsLimitLast), {}, &IsFpsLimitValueEnabled, &FormatFpsLimit,
-            "$SGS_FPS_LIMIT_DESC", &OnSettingCommit);
+        if (reflex) {
+            AddVanillaSetting("$SGS_PERFORMANCE_TAB", Type::kCheckbox, "$SGS_ENABLED", &GetReflexEnabled, &SetReflexEnabled, 1.0f, {},
+                nullptr, nullptr, "$SGS_REFLEX_ENABLED_DESC", &OnSettingCommit);
+            AddVanillaSetting("$SGS_PERFORMANCE_TAB", Type::kCheckbox, "$SGS_LOW_LATENCY_MODE", &GetReflexLowLatency,
+                &SetReflexLowLatency, 1.0f, {}, &IsReflexEnabled, nullptr,
+                "$SGS_LOW_LATENCY_MODE_DESC", &OnSettingCommit);
+            AddVanillaSetting("$SGS_PERFORMANCE_TAB", Type::kCheckbox, "$SGS_LOW_LATENCY_BOOST", &GetReflexBoost, &SetReflexBoost,
+                0.0f, {}, &IsReflexEnabled, nullptr,
+                "$SGS_LOW_LATENCY_BOOST_DESC", &OnSettingCommit);
+            AddVanillaSetting("$SGS_PERFORMANCE_TAB", Type::kCheckbox, "$SGS_USE_MARKERS_TO_OPTIMIZE", &GetReflexMarkers,
+                &SetReflexMarkers, 0.0f, {}, &IsReflexEnabled, nullptr,
+                "$SGS_USE_MARKERS_TO_OPTIMIZE_DESC", &OnSettingCommit);
+            AddVanillaSetting("$SGS_PERFORMANCE_TAB", Type::kCheckbox, "$SGS_ENABLE_FPS_LIMIT", &GetReflexFpsLimitEnabled,
+                &SetReflexFpsLimitEnabled, 0.0f, {}, &IsReflexEnabled, nullptr,
+                "$SGS_ENABLE_FPS_LIMIT_DESC", &OnSettingCommit);
+            // Default is 60 fps, which sits at index 3 of the preset table.
+            AddVanillaSetting("$SGS_PERFORMANCE_TAB", Type::kSlider, "$SGS_FPS_LIMIT", &GetReflexFpsLimit, &SetReflexFpsLimit,
+                3.0f / static_cast<float>(kFpsLimitLast), {}, &IsFpsLimitValueEnabled, &FormatFpsLimit,
+                "$SGS_FPS_LIMIT_DESC", &OnSettingCommit);
+        }
 
-        AddVanillaSetting("$SGS_EFFECTS_TAB", Type::kCheckbox, "$SGS_ENABLED", &GetPostProcessingEnabled,
-            &SetPostProcessingEnabled, 1.0f, {}, nullptr, nullptr,
-            "$SGS_EFFECTS_ENABLED_DESC", &OnSettingCommit);
-        AddVanillaSetting("$SGS_EFFECTS_TAB", Type::kDropdown, "$SGS_TONEMAP_CURVE", &GetTonemapMethod, &SetTonemapMethod,
-            3.0f, { "$SGS_CHANNEL", "$SGS_PEAK", "$SGS_AVERAGE_LUMA", "$SGS_FROSTBYTE", "$SGS_ACES" }, &IsGradingEnabled, nullptr,
-            "$SGS_TONEMAP_CURVE_DESC", &OnSettingCommit);
-        AddVanillaSetting("$SGS_EFFECTS_TAB", Type::kSlider, "$SGS_EXPOSURE", &GetExposure, &SetExposure, 0.5f, {},
-            &IsGradingEnabled, &FormatDecimal2, "$SGS_EXPOSURE_DESC", &OnSettingCommit);
-        AddVanillaSetting("$SGS_EFFECTS_TAB", Type::kSlider, "$SGS_CONTRAST", &GetContrast, &SetContrast,
-            (1.39f - 0.5f) / 1.5f, {}, &IsGradingEnabled, &FormatDecimal2,
-            "$SGS_CONTRAST_DESC", &OnSettingCommit);
-        AddVanillaSetting("$SGS_EFFECTS_TAB", Type::kSlider, "$SGS_SATURATION", &GetSaturation, &SetSaturation, 0.5f, {},
-            &IsGradingEnabled, &FormatDecimal2, "$SGS_SATURATION_DESC", &OnSettingCommit);
-        AddVanillaSetting("$SGS_EFFECTS_TAB", Type::kSlider, "$SGS_BLOOM_INTENSITY", &GetBloomIntensity, &SetBloomIntensity,
-            0.5f, {}, &IsGradingEnabled, &FormatDecimal2, "$SGS_BLOOM_INTENSITY_DESC", &OnSettingCommit);
+        if (postProcessing) {
+            AddVanillaSetting("$SGS_EFFECTS_TAB", Type::kCheckbox, "$SGS_ENABLED", &GetPostProcessingEnabled,
+                &SetPostProcessingEnabled, 1.0f, {}, nullptr, nullptr,
+                "$SGS_EFFECTS_ENABLED_DESC", &OnSettingCommit);
+            AddVanillaSetting("$SGS_EFFECTS_TAB", Type::kDropdown, "$SGS_TONEMAP_CURVE", &GetTonemapMethod, &SetTonemapMethod,
+                3.0f, { "$SGS_CHANNEL", "$SGS_PEAK", "$SGS_AVERAGE_LUMA", "$SGS_FROSTBYTE", "$SGS_ACES" }, &IsGradingEnabled, nullptr,
+                "$SGS_TONEMAP_CURVE_DESC", &OnSettingCommit);
+            AddVanillaSetting("$SGS_EFFECTS_TAB", Type::kSlider, "$SGS_EXPOSURE", &GetExposure, &SetExposure, 0.5f, {},
+                &IsGradingEnabled, &FormatDecimal2, "$SGS_EXPOSURE_DESC", &OnSettingCommit);
+            AddVanillaSetting("$SGS_EFFECTS_TAB", Type::kSlider, "$SGS_CONTRAST", &GetContrast, &SetContrast,
+                (1.39f - 0.5f) / 1.5f, {}, &IsGradingEnabled, &FormatDecimal2,
+                "$SGS_CONTRAST_DESC", &OnSettingCommit);
+            AddVanillaSetting("$SGS_EFFECTS_TAB", Type::kSlider, "$SGS_SATURATION", &GetSaturation, &SetSaturation, 0.5f, {},
+                &IsGradingEnabled, &FormatDecimal2, "$SGS_SATURATION_DESC", &OnSettingCommit);
+            AddVanillaSetting("$SGS_EFFECTS_TAB", Type::kSlider, "$SGS_BLOOM_INTENSITY", &GetBloomIntensity, &SetBloomIntensity,
+                0.5f, {}, &IsGradingEnabled, &FormatDecimal2, "$SGS_BLOOM_INTENSITY_DESC", &OnSettingCommit);
 
-        // Same static-option-list constraint as every other dropdown -
-        // picking up files dropped in after this scan needs a restart.
-        LUT::Rescan();
-        g_lutOptions.assign(1, "None");
-        for (const auto& name : LUT::AvailableNames())
-            g_lutOptions.push_back(name);
-        AddVanillaSetting("$SGS_LUT_TAB", Type::kDropdown, "$SGS_COLOR_GRADING_LUT", &GetLutIndex, &SetLutIndex, 0.0f,
-            g_lutOptions, nullptr, nullptr,
-            "$SGS_COLOR_GRADING_LUT_DESC", &OnSettingCommit);
-        AddVanillaSetting("$SGS_LUT_TAB", Type::kSlider, "$SGS_LUT_STRENGTH", &GetLutStrength, &SetLutStrength, 1.0f, {},
-            &IsLutStrengthEnabled, nullptr, "$SGS_LUT_STRENGTH_DESC", &OnSettingCommit);
+            // Same static-option-list constraint as every other dropdown -
+            // picking up files dropped in after this scan needs a restart.
+            LUT::Rescan();
+            g_lutOptions.assign(1, "None");
+            for (const auto& name : LUT::AvailableNames())
+                g_lutOptions.push_back(name);
+            AddVanillaSetting("$SGS_LUT_TAB", Type::kDropdown, "$SGS_COLOR_GRADING_LUT", &GetLutIndex, &SetLutIndex, 0.0f,
+                g_lutOptions, nullptr, nullptr,
+                "$SGS_COLOR_GRADING_LUT_DESC", &OnSettingCommit);
+            AddVanillaSetting("$SGS_LUT_TAB", Type::kSlider, "$SGS_LUT_STRENGTH", &GetLutStrength, &SetLutStrength, 1.0f, {},
+                &IsLutStrengthEnabled, nullptr, "$SGS_LUT_STRENGTH_DESC", &OnSettingCommit);
+        }
 
         // Suite-wide switches, kept apart from the per-module tabs.
         NativeSystemMenuFramework::AddVanillaLabel("$SGS_SIMPLE_GRAPHICS_SUITE_TAB", &GetVersionLabel);
+        if (!Compatibility::DetectedNames().empty())
+            NativeSystemMenuFramework::AddVanillaLabel("$SGS_SIMPLE_GRAPHICS_SUITE_TAB", &GetCompatibilityLabel);
         AddVanillaSetting("$SGS_SIMPLE_GRAPHICS_SUITE_TAB", Type::kCheckbox, "$SGS_ENABLED", &GetMasterEnabled, &SetMasterEnabled,
             1.0f, {}, nullptr, nullptr, "$SGS_MASTER_ENABLED_DESC", &OnSettingCommit);
         AddVanillaSetting("$SGS_SIMPLE_GRAPHICS_SUITE_TAB", Type::kCheckbox, "$SGS_DEBUG_MODE", &GetDebugEnabled, &SetDebugEnabled,
@@ -519,18 +545,24 @@ namespace NativeMenuIntegration
         if (IsDebugEnabled()) {
             using NativeSystemMenuFramework::AddVanillaLabel;
             AddVanillaLabel("$SGS_SIMPLE_GRAPHICS_SUITE_TAB", &GetInfoGpu);
-            AddVanillaLabel("$SGS_SIMPLE_GRAPHICS_SUITE_TAB", &GetInfoHooks);
-            AddVanillaLabel("$SGS_SIMPLE_GRAPHICS_SUITE_TAB", &GetInfoAntiAliasing);
-            AddVanillaLabel("$SGS_SIMPLE_GRAPHICS_SUITE_TAB", &GetInfoDlss);
-            AddVanillaLabel("$SGS_SIMPLE_GRAPHICS_SUITE_TAB", &GetInfoPostProcessing);
-            AddVanillaLabel("$SGS_SIMPLE_GRAPHICS_SUITE_TAB", &GetInfoReflex);
+            // One row for both modules, so it only says anything while both run.
+            if (antiAliasing && postProcessing)
+                AddVanillaLabel("$SGS_SIMPLE_GRAPHICS_SUITE_TAB", &GetInfoHooks);
+            if (antiAliasing) {
+                AddVanillaLabel("$SGS_SIMPLE_GRAPHICS_SUITE_TAB", &GetInfoAntiAliasing);
+                AddVanillaLabel("$SGS_SIMPLE_GRAPHICS_SUITE_TAB", &GetInfoDlss);
+            }
+            if (postProcessing)
+                AddVanillaLabel("$SGS_SIMPLE_GRAPHICS_SUITE_TAB", &GetInfoPostProcessing);
+            if (reflex)
+                AddVanillaLabel("$SGS_SIMPLE_GRAPHICS_SUITE_TAB", &GetInfoReflex);
             AddVanillaLabel("$SGS_SIMPLE_GRAPHICS_SUITE_TAB", &GetInfoResolution);
 
-            NativeSystemMenuFramework::AddVanillaButton("$SGS_SIMPLE_GRAPHICS_SUITE_TAB", "$SGS_RELOAD_SHADERS_FROM_DISK",
-                &OnReloadShaders);
+            if (postProcessing)
+                NativeSystemMenuFramework::AddVanillaButton("$SGS_SIMPLE_GRAPHICS_SUITE_TAB", "$SGS_RELOAD_SHADERS_FROM_DISK",
+                    &OnReloadShaders);
         }
 
-        logger::info("NativeMenuIntegration: registered vanilla settings (Display, Accessibility, Performance, "
-            "Effects, LUT)");
+        logger::info("NativeMenuIntegration: registered vanilla settings");
     }
 }

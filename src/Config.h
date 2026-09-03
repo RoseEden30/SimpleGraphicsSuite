@@ -131,3 +131,7 @@ bool IsDebugEnabled();
 // Updates the flag and writes it straight to the ini, without touching the
 // rest of the settings.
 void SetDebugEnabled(bool a_enabled);
+
+// [General] IgnoreModConflicts - kept outside Settings for the same reason as
+// the debug flag. Read once at startup, so a change needs a restart.
+bool IsIgnoringModConflicts();

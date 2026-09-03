@@ -49,6 +49,7 @@ add_commonlibsse_plugin(
     AUTHOR ${PLUGIN_AUTHOR}
     SOURCES
         src/plugin.cpp
+        src/Compatibility.cpp
         src/Config.cpp
         src/DeviceHook.cpp
         src/FrameBufferCache.cpp

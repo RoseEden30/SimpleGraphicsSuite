@@ -1,5 +1,6 @@
 #include "Upscaling.h"
 
+#include "Compatibility.h"
 #include "Config.h"
 
 namespace Upscaling
@@ -14,6 +15,11 @@ namespace Upscaling
     bool IsActive(const Settings& a_settings)
     {
         if (!a_settings.masterEnabled || !a_settings.upscaling.enabled)
+            return false;
+
+        // Dropping the ratio without the shader that reconstructs it would
+        // only leave the scene blurry.
+        if (Compatibility::IsSuppressed(Compatibility::kPostProcessing))
             return false;
 
         const auto& aa = a_settings.antiAliasing;

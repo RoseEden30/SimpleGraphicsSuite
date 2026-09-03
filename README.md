@@ -14,6 +14,10 @@ One DLL, one ini. The plugin runs on its own. If [NativeSystemMenuFramework](htt
 
 Anything switched off costs nothing at runtime.
 
+## Compatibility
+
+Modules another installed mod already owns are left off entirely, hooks included, and their rows are hidden from the menu. Community Shaders (and Open Shaders) takes over anti-aliasing, post-processing and Reflex that way, leaving accessibility. The ini keeps its values throughout, so removing that mod brings everything back. `[General] IgnoreModConflicts=1` runs them anyway.
+
 ## Building
 
 Visual Studio 2022, CMake 3.21+, vcpkg with `VCPKG_ROOT` set.

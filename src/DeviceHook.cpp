@@ -1,5 +1,6 @@
 #include "DeviceHook.h"
 
+#include "Compatibility.h"
 #include "Streamline.h"
 
 #include <d3d11.h>
@@ -28,11 +29,14 @@ namespace DeviceHook
                 // Manual-hooking mode needs both interfaces swapped for
                 // Streamline's proxies before anyone touches them, or its
                 // per-frame bookkeeping never runs. slSetD3DDevice then takes
-                // the upgraded device.
-                Streamline::EnsureInitialized();
-                Streamline::UpgradeInterface(reinterpret_cast<void**>(a_device));
-                Streamline::UpgradeInterface(reinterpret_cast<void**>(a_swapChain));
-                Streamline::SetDevice(reinterpret_cast<ID3D11Device*>(*a_device));
+                // the upgraded device. DLAA is the only caller, so a mod owning
+                // anti-aliasing owns the interposer too.
+                if (!Compatibility::IsSuppressed(Compatibility::kAntiAliasing)) {
+                    Streamline::EnsureInitialized();
+                    Streamline::UpgradeInterface(reinterpret_cast<void**>(a_device));
+                    Streamline::UpgradeInterface(reinterpret_cast<void**>(a_swapChain));
+                    Streamline::SetDevice(reinterpret_cast<ID3D11Device*>(*a_device));
+                }
             }
 
             return result;
