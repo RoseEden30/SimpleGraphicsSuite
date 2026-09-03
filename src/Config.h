@@ -63,6 +63,13 @@ struct Settings
     } upscaling;
 
 
+    struct SoftShadows
+    {
+        bool enabled = false;
+
+        bool operator==(const SoftShadows&) const = default;
+    } softShadows;
+
     struct Accessibility
     {
         // 0=Off, 1=Protanopia, 2=Deuteranopia, 3=Tritanopia, 4=Grayscale (debug).

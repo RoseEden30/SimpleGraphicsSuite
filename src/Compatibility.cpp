@@ -16,7 +16,7 @@ namespace Compatibility
         // Only place to edit to add a mod. Open Shaders ships the same DLL
         // name and takes over the same pipeline.
         constexpr Entry kKnown[] = {
-            { L"CommunityShaders.dll", "Community Shaders", kAntiAliasing | kPostProcessing | kReflex },
+            { L"CommunityShaders.dll", "Community Shaders", kAntiAliasing | kPostProcessing | kReflex | kSoftShadows },
         };
 
         struct Detection

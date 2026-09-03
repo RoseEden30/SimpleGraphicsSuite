@@ -92,6 +92,14 @@ namespace NativeMenuIntegration
             return aa.enabled && aa.method == 0;
         }
 
+        float __stdcall GetSoftShadowsEnabled() { return ActiveSettings()->softShadows.enabled ? 1.0f : 0.0f; }
+        void  __stdcall SetSoftShadowsEnabled(float a_value)
+        {
+            EditableSettings().softShadows.enabled = a_value != 0.0f;
+            PublishSettings();
+            RequestSaveSettings();
+        }
+
         // Off, then AMD's own FSR1 quality presets - matches the values
         // Upscaling.cpp's own render scale slider is documented against.
         constexpr float kUpscalePresets[] = { 1.0f, 0.77f, 0.67f, 0.58f, 0.50f };
@@ -442,6 +450,7 @@ namespace NativeMenuIntegration
         const bool postProcessing = !Compatibility::IsSuppressed(Compatibility::kPostProcessing);
         const bool antiAliasing = !Compatibility::IsSuppressed(Compatibility::kAntiAliasing);
         const bool reflex = !Compatibility::IsSuppressed(Compatibility::kReflex);
+        const bool softShadows = !Compatibility::IsSuppressed(Compatibility::kSoftShadows);
 
         if (postProcessing) {
             AddVanillaSetting("Display", Type::kSlider, "$SGS_MOTION_BLUR", &GetMotionBlurStrength,
@@ -462,6 +471,11 @@ namespace NativeMenuIntegration
             AddVanillaSetting("Display", Type::kSlider, "$SGS_TEXTURE_DEBLUR", &GetTextureDeblur, &SetTextureDeblur,
                 0.9f / kMaxDeblur, {}, &IsTextureDeblurEnabled, &FormatDecimal2,
                 "$SGS_TEXTURE_DEBLUR_DESC", &OnSettingCommit);
+        }
+
+        if (softShadows) {
+            AddVanillaSetting("Display", Type::kCheckbox, "$SGS_SOFT_SHADOWS", &GetSoftShadowsEnabled,
+                &SetSoftShadowsEnabled, 0.0f, {}, nullptr, nullptr, "$SGS_SOFT_SHADOWS_DESC", &OnSettingCommit);
         }
 
         if (postProcessing) {

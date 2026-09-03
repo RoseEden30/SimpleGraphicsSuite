@@ -11,6 +11,7 @@ namespace Compatibility
         // vignette, LUT, FSR1.
         kPostProcessing = 1 << 1,
         kReflex = 1 << 2,
+        kSoftShadows = 1 << 3,
     };
 
     bool IsSuppressed(Module a_module);

@@ -11,6 +11,7 @@
 #include "Features/DLSS.h"
 #include "Features/PostProcessing.h"
 #include "Features/Reflex.h"
+#include "Features/SoftShadows.h"
 
 namespace
 {
@@ -55,6 +56,8 @@ namespace
             if (!Compatibility::IsSuppressed(Compatibility::kAntiAliasing))
                 DLSS::EnsureInitialized();
             Accessibility::InstallHooks();
+            if (!Compatibility::IsSuppressed(Compatibility::kSoftShadows))
+                SoftShadows::InstallHooks();
             // Its only reader is DLSS, and support is fixed for the session.
             if (DLSS::IsSupported())
                 FrameBufferCache::InstallHooks();

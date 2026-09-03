@@ -9,6 +9,7 @@ One DLL, one ini. The plugin runs on its own. If [NativeSystemMenuFramework](htt
 - **Anti-aliasing** - TAA (with a mip LOD bias deblur), FXAA, or NVIDIA DLAA through Streamline. Mutually exclusive; picking one turns the others off.
 - **Post-processing** - doodlum's Vanilla HDR tonemap with five selectable curves, FidelityFX RCAS sharpening, exposure/contrast/saturation/bloom intensity, `.cube` LUT color grading, motion blur off the engine's own motion vector buffer, and a vignette that can be limited to sneaking.
 - **Upscaling (experimental)** - renders the 3D scene below native resolution through the engine's dynamic resolution, then reconstructs with FidelityFX FSR1 (EASU). Ignored under FXAA and DLAA, which both take the resolution back.
+- **Soft shadows** - scales the engine's own shadow softness with scene lighting: soft in dim/overcast light, sharp in direct sun, fixed indoors.
 - **Accessibility** - protanopia, deuteranopia and tritanopia daltonization with adjustable strength, applied over the finished frame so it corrects the UI too.
 - **NVIDIA Reflex** - low-latency mode and an optional frame cap through NVAPI. No effect on AMD or Intel.
 
@@ -16,7 +17,7 @@ Anything switched off costs nothing at runtime.
 
 ## Compatibility
 
-Modules another installed mod already owns are left off entirely, hooks included, and their rows are hidden from the menu. Community Shaders (and Open Shaders) takes over anti-aliasing, post-processing and Reflex that way, leaving accessibility. The ini keeps its values throughout, so removing that mod brings everything back. `[General] IgnoreModConflicts=1` runs them anyway.
+Modules another installed mod already owns are left off entirely, hooks included, and their rows are hidden from the menu. Community Shaders (and Open Shaders) takes over anti-aliasing, post-processing, Reflex and soft shadows that way, leaving accessibility. The ini keeps its values throughout, so removing that mod brings everything back. `[General] IgnoreModConflicts=1` runs them anyway.
 
 ## Building
 

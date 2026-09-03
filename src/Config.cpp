@@ -110,6 +110,16 @@ namespace
 
 
 
+    void ReadSoftShadows(const CSimpleIniA& ini, Settings::SoftShadows& section)
+    {
+        section.enabled = ini.GetBoolValue("SoftShadows", "Enabled", section.enabled);
+    }
+
+    void WriteSoftShadows(CSimpleIniA& ini, const Settings::SoftShadows& section)
+    {
+        ini.SetBoolValue("SoftShadows", "Enabled", section.enabled);
+    }
+
     void ReadAccessibility(const CSimpleIniA& ini, Settings::Accessibility& section)
     {
         section.colorblindMode =
@@ -198,6 +208,7 @@ namespace
         WriteAntiAliasing(ini, settings.antiAliasing);
         WritePostProcessing(ini, settings.postProcessing);
         WriteUpscaling(ini, settings.upscaling);
+        WriteSoftShadows(ini, settings.softShadows);
         WriteAccessibility(ini, settings.accessibility);
         WriteReflex(ini, settings.reflex);
         ini.SetBoolValue("Debug", "Enabled", g_debugEnabled);
@@ -245,6 +256,7 @@ void LoadSettings()
         ReadAntiAliasing(ini, g_editing.antiAliasing);
         ReadPostProcessing(ini, g_editing.postProcessing);
         ReadUpscaling(ini, g_editing.upscaling);
+        ReadSoftShadows(ini, g_editing.softShadows);
         ReadAccessibility(ini, g_editing.accessibility);
         ReadReflex(ini, g_editing.reflex);
         g_ignoreModConflicts = ini.GetBoolValue("General", "IgnoreModConflicts", false);

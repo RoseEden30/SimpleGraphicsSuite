@@ -64,6 +64,7 @@ add_commonlibsse_plugin(
         src/Features/LUT.cpp
         src/Features/Reflex.cpp
         src/Features/PostProcessing.cpp
+        src/Features/SoftShadows.cpp
         src/Features/Upscaling.cpp
         src/Features/DLSS.cpp
 )
