@@ -1,0 +1,14 @@
+build/
+install/
+out/
+
+vcpkg_installed/
+.vs/
+.vscode/
+CMakeUserPresets.json
+
+*.user
+*.aps
+
+# Third-party SDKs, fetched locally (see README)
+extern/

@@ -1,0 +1,11 @@
+{
+    "name": "simple-graphics-suite",
+    "version-string": "1.0.0",
+    "dependencies": [
+        "simpleini",
+        "spdlog",
+        "directxtk",
+        "rapidcsv",
+        "xbyak"
+    ]
+}
