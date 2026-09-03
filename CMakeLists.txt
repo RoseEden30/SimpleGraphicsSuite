@@ -98,17 +98,22 @@ if(DEFINED OUTPUT_FOLDER)
 
     message(STATUS "SKSE plugin output folder: ${DLL_FOLDER}")
 
-    add_custom_command(
-        TARGET "${PROJECT_NAME}"
-        POST_BUILD
+    add_custom_target(deploy_content ALL
         COMMAND "${CMAKE_COMMAND}" -E make_directory "${DLL_FOLDER}"
+        VERBATIM
+    )
+    add_dependencies(deploy_content "${PROJECT_NAME}")
+
+    add_custom_command(
+        TARGET deploy_content
+        POST_BUILD
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different "$<TARGET_FILE:${PROJECT_NAME}>" "${DLL_FOLDER}/$<TARGET_FILE_NAME:${PROJECT_NAME}>"
         VERBATIM
     )
 
     # Crash Logger SSE reads a .pdb sitting next to the plugin.
     add_custom_command(
-        TARGET "${PROJECT_NAME}"
+        TARGET deploy_content
         POST_BUILD
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different "$<TARGET_PDB_FILE:${PROJECT_NAME}>" "${DLL_FOLDER}/$<TARGET_PDB_FILE_NAME:${PROJECT_NAME}>"
         VERBATIM
@@ -118,7 +123,7 @@ if(DEFINED OUTPUT_FOLDER)
     # in game, in dev or on a player's install.
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/package/${PROJECT_NAME}.ini")
         add_custom_command(
-            TARGET "${PROJECT_NAME}"
+            TARGET deploy_content
             POST_BUILD
             COMMAND "${CMAKE_COMMAND}"
                 "-DSRC=${CMAKE_CURRENT_SOURCE_DIR}/package/${PROJECT_NAME}.ini"
@@ -134,7 +139,7 @@ if(DEFINED OUTPUT_FOLDER)
     # a player edits.
     if(IS_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/Interface/Translations")
         add_custom_command(
-            TARGET "${PROJECT_NAME}"
+            TARGET deploy_content
             POST_BUILD
             COMMAND "${CMAKE_COMMAND}" -E copy_directory
                 "${CMAKE_CURRENT_SOURCE_DIR}/Interface/Translations"
@@ -146,7 +151,7 @@ if(DEFINED OUTPUT_FOLDER)
     # Vanilla HDR shaders, loaded at runtime from Data/Shaders/<technique>/.
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Data/Shaders")
         add_custom_command(
-            TARGET "${PROJECT_NAME}"
+            TARGET deploy_content
             POST_BUILD
             COMMAND "${CMAKE_COMMAND}" -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/Data/Shaders" "${OUTPUT_FOLDER}/Shaders"
             VERBATIM
@@ -156,7 +161,7 @@ if(DEFINED OUTPUT_FOLDER)
     # Vendor DLLs (Streamline's interposer and plugins) - same layout
     # Community Shaders uses for these binaries.
     add_custom_command(
-        TARGET "${PROJECT_NAME}"
+        TARGET deploy_content
         POST_BUILD
         COMMAND "${CMAKE_COMMAND}" -E make_directory "${OUTPUT_FOLDER}/Shaders/${PROJECT_NAME}/Streamline"
         COMMAND "${CMAKE_COMMAND}" -E copy_directory
