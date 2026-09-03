@@ -25,7 +25,7 @@
 
 // >>>>>>EXTENDED BLOOM MIXING<<<<<< //
 
-#define SETTING_UIB_Saturation 		0.3
+#define SETTING_UIB_Saturation 		0.7
 #ifndef SETTING_UIB_BloomIntensity
 #define SETTING_UIB_BloomIntensity 	1.0
 #endif
