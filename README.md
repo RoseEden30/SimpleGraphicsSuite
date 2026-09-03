@@ -22,7 +22,7 @@ Visual Studio 2022, CMake 3.21+, vcpkg with `VCPKG_ROOT` set.
 git clone https://github.com/RoseEden30/SimpleGraphicsSuite
 cd SimpleGraphicsSuite
 cmake --preset release
-build.bat
+cmake --build build/release
 ```
 
 The third-party SDKs under `extern/` are not stored in this repository. Fetch
@@ -33,8 +33,8 @@ them before configuring:
 - `extern/Streamline` - an NVIDIA Streamline SDK release, keeping its `include/`
   and `bin/x64/` layout
 
-`build.bat` finds the toolset with vswhere and sets up the MSVC environment first;
-`cmake --build build/release` on its own only works from a Developer prompt.
+Run both from an **x64 Native Tools Command Prompt for VS 2022**, so the MSVC
+environment is set up.
 
 Set `SKYRIM_MODS_FOLDER` or `SKYRIM_FOLDER` to deploy on every build.
 
