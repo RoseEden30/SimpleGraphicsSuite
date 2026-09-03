@@ -18,7 +18,7 @@ Anything switched off costs nothing at runtime.
 
 ## Compatibility
 
-Modules another installed mod already owns are left off entirely, hooks included, and their rows are hidden from the menu. Community Shaders (and Open Shaders) takes over anti-aliasing, post-processing, Reflex and soft shadows that way, leaving accessibility. First Person FOV and Tween Menu Fix takes over field of view. The ini keeps its values throughout, so removing that mod brings everything back. `[General] IgnoreModConflicts=1` runs them anyway.
+Modules another installed mod already owns are left off entirely, hooks included, and their rows are hidden from the menu. Community Shaders (and Open Shaders) takes over anti-aliasing, post-processing, Reflex and soft shadows that way, leaving accessibility - ENB is treated the same way. First Person FOV and Tween Menu Fix takes over field of view. The ini keeps its values throughout, so removing that mod brings everything back. `[General] IgnoreModConflicts=1` runs them anyway.
 
 ## Building
 

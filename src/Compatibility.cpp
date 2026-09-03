@@ -2,6 +2,8 @@
 
 #include "Config.h"
 
+#include <psapi.h>
+
 namespace Compatibility
 {
     namespace
@@ -20,6 +22,22 @@ namespace Compatibility
             // Hooks the same TESCamera::Update call site to do the same job.
             { L"FirstPersonFOV.dll", "First Person FOV and Tween Menu Fix", kFieldOfView },
         };
+
+        // ENB replaces d3d11.dll itself, so it can't be named like the mods above.
+        bool IsEnbLoaded()
+        {
+            HMODULE modules[1024];
+            DWORD   needed = 0;
+            if (!K32EnumProcessModules(GetCurrentProcess(), modules, sizeof(modules), &needed))
+                return false;
+
+            const auto count = std::min<DWORD>(needed / sizeof(HMODULE), static_cast<DWORD>(std::size(modules)));
+            for (DWORD i = 0; i < count; ++i) {
+                if (GetProcAddress(modules[i], "ENBGetSDKVersion"))
+                    return true;
+            }
+            return false;
+        }
 
         struct Detection
         {
@@ -43,6 +61,13 @@ namespace Compatibility
                     if (!result.names.empty())
                         result.names += ", ";
                     result.names += entry.name;
+                }
+
+                if (IsEnbLoaded()) {
+                    result.modules |= kAntiAliasing | kPostProcessing | kReflex | kSoftShadows;
+                    if (!result.names.empty())
+                        result.names += ", ";
+                    result.names += "ENB";
                 }
 
                 if (result.modules)
