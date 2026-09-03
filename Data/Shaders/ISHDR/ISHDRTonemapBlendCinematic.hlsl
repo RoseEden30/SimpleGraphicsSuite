@@ -371,6 +371,17 @@ float3 triDither(float3 color, float2 uv, float timer)
 }
 
 
+float3 SoftBloom(float2 uv)
+{
+	const float2 texel = float2(SCREEN_INV_WIDTH, SCREEN_INV_HEIGHT) * 12.0;
+	float3       sum = TextureBloom.Sample(TextureBloomSampler, uv).rgb;
+	sum += TextureBloom.Sample(TextureBloomSampler, uv + float2(texel.x, texel.y)).rgb;
+	sum += TextureBloom.Sample(TextureBloomSampler, uv + float2(-texel.x, texel.y)).rgb;
+	sum += TextureBloom.Sample(TextureBloomSampler, uv + float2(texel.x, -texel.y)).rgb;
+	sum += TextureBloom.Sample(TextureBloomSampler, uv + float2(-texel.x, -texel.y)).rgb;
+	return sum * 0.2;
+}
+
 // Cheap, standard screen-space vignette (the well-known uv*(1-uv) trick) -
 // darkens toward the corners, off entirely at strength 0.
 float3 ApplyVignette(float3 color, float2 uv, float strength)
@@ -526,7 +537,9 @@ PS_OUTPUT main(PS_INPUT input)
 	if (SGS_PostProcessingEnabled > 0.5) {
 		bool scaleBloom = (0.5 <= Params01[0].x);
 		float bloomFactor = Params01[2].x;
-		float3 Bloom = TextureBloom.Sample(TextureBloomSampler, (scaleBloom) ? scaledUV.xy : input.TexCoord.xy).rgb;
+		float2 bloomUV = (scaleBloom) ? scaledUV.xy : input.TexCoord.xy;
+		float3 Bloom = TextureBloom.Sample(TextureBloomSampler, bloomUV).rgb;
+		Bloom += SoftBloom(bloomUV) * 0.5;
 
 		//------------------------- Apply Game Imagespace and HDR Color Grading ------------------------//
 
