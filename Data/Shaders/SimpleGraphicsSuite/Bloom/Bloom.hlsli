@@ -99,7 +99,7 @@ float3 Downsample13(float2 a_uv, float2 a_texelSize, bool a_karis)
 	return result;
 }
 
-// 3x3 tent used on the way back up. Its radius is in texels of the target,
+// 3x3 tent used on the way back up. Its radius is in texels of the level below,
 // which is why each level widens the glow instead of just rescaling it.
 float3 UpsampleTent(float2 a_uv, float2 a_texelSize, float a_radius)
 {

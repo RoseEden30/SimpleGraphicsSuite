@@ -247,10 +247,14 @@ namespace PostProcessing
             REX::W32::D3D11_PRIMITIVE_TOPOLOGY  topology{};
             REX::W32::ID3D11ShaderResourceView* srvs[3]{};
             REX::W32::ID3D11SamplerState*       samplers[2]{};
+            // b0 is the engine's own PerTechnique slot, and the bloom chain
+            // binds its constants there.
+            REX::W32::ID3D11Buffer*             constantBuffer0 = nullptr;
 
             explicit SavedPipelineState(REX::W32::ID3D11DeviceContext* a_context) :
                 context(a_context)
             {
+                context->PSGetConstantBuffers(0, 1, &constantBuffer0);
                 context->OMGetRenderTargets(1, &rtv, &dsv);
                 std::uint32_t viewportCount = 1;
                 context->RSGetViewports(&viewportCount, &viewport);
@@ -270,7 +274,10 @@ namespace PostProcessing
                 context->IASetPrimitiveTopology(topology);
                 context->PSSetShaderResources(0, 3, srvs);
                 context->PSSetSamplers(0, 2, samplers);
+                context->PSSetConstantBuffers(0, 1, &constantBuffer0);
 
+                if (constantBuffer0)
+                    constantBuffer0->Release();
                 if (rtv)
                     rtv->Release();
                 if (dsv)
@@ -292,16 +299,21 @@ namespace PostProcessing
         };
 
         // Builds the glow off the colour the tonemap draw is about to read and
-        // binds it over TextureBloom (t0), in place of the engine's own.
+        // binds it as TextureEnhancedBloom (t10), in place of the engine's own.
         void ApplyBloom(REX::W32::ID3D11DeviceContext* a_context, const Settings& a_settings)
         {
+            auto* ui = RE::UI::GetSingleton();
+            const bool loadingMenuOpen = ui && ui->IsMenuOpen(RE::LoadingMenu::MENU_NAME);
             const bool wanted =
                 a_settings.masterEnabled && a_settings.postProcessing.enabled &&
-                a_settings.postProcessing.bloomIntensity > 0.0f;
+                a_settings.postProcessing.bloomIntensity > 0.0f && !loadingMenuOpen;
             if (!wanted) {
                 if (g_bloomEnhanced) {
                     g_bloomEnhanced = false;
                     UpdateSettingsBuffer(a_settings);
+                    // t10 would otherwise stay bound after this technique stops drawing.
+                    REX::W32::ID3D11ShaderResourceView* null = nullptr;
+                    a_context->PSSetShaderResources(10, 1, &null);
                 }
                 return;
             }
@@ -344,6 +356,8 @@ namespace PostProcessing
                     loggedOnce = true;
                 }
             } else if (!applied) {
+                REX::W32::ID3D11ShaderResourceView* null = nullptr;
+                a_context->PSSetShaderResources(10, 1, &null);
                 static bool loggedFailureOnce = false;
                 if (!loggedFailureOnce) {
                     logger::warn("Bloom: enabled but failed to apply - see earlier Bloom errors in the log");

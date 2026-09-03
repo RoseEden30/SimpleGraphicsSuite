@@ -2,7 +2,7 @@
 
 // Progressive downsample/upsample bloom, replacing the engine's own single
 // fixed-radius blur. Dispatched from PostProcessing's SetupTechnique hook,
-// just before the tonemap draw, and bound over TextureBloom (t0).
+// just before the tonemap draw, and bound as TextureEnhancedBloom (t10).
 namespace Bloom
 {
     // Reads a_colorSRV (the scene colour the tonemap pass is about to use) and
