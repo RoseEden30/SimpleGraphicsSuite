@@ -46,6 +46,8 @@ struct Settings
         // all the time - a stealth-game visual cue.
         bool vignetteSneakOnly = false;
 
+        float filmGrain = 0.0f;  // 0.0-1.0, 0=off
+
         // 3D color grading LUT (.cube), scanned from
         // Data/Shaders/SimpleGraphicsSuite/LUTs/ - empty name means none.
         std::string lutName;

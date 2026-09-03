@@ -380,6 +380,12 @@ float3 ApplyVignette(float3 color, float2 uv, float strength)
 	return lerp(color, color * vig, strength);
 }
 
+float3 ApplyFilmGrain(float3 color, float2 uv, float time, float strength)
+{
+	float noise = rand21(uv + time) - 0.5;
+	return color + noise * strength * 0.1;
+}
+
 PS_OUTPUT main(PS_INPUT input)
 {
 	//------------------------- Shader Parameters Stage ------------------------//
@@ -571,6 +577,7 @@ PS_OUTPUT main(PS_INPUT input)
 
 	Color = SGS_ApplyLUT(LUTTexture, LUTSampler, Color, SGS_LUTStrength, SGS_LUTSize);
 	Color = ApplyVignette(Color, input.TexCoord.xy, SGS_Vignette);
+	Color = ApplyFilmGrain(Color, input.TexCoord.xy, SGS_GrainTime, SGS_FilmGrain);
 
 	Color += triDither(Color, scaledUV, Grey);
 	PS_OUTPUT psout;

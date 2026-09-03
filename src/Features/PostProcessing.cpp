@@ -43,8 +43,8 @@ namespace PostProcessing
             float tonemapMethod;
             float vignette;
             float postProcessingEnabled;  // gates only the ENB grading block, see SGS_PostProcessingEnabled
-            float reserved1;  // pads to a 16-byte cbuffer row - keep in sync with Settings.hlsli
-            float reserved2;
+            float filmGrain;
+            float grainTime;
             float reserved3;
             float reserved4;
         };
@@ -79,6 +79,14 @@ namespace PostProcessing
         constexpr float                      kVignetteFadeSeconds = 0.35f;
         float                                 g_vignetteCurrent = 0.0f;
         std::chrono::steady_clock::time_point g_vignetteLastTick = std::chrono::steady_clock::now();
+
+        const std::chrono::steady_clock::time_point kGrainStart = std::chrono::steady_clock::now();
+
+        float GrainTime()
+        {
+            const auto seconds = std::chrono::duration<float>(std::chrono::steady_clock::now() - kGrainStart).count();
+            return std::fmod(seconds, 1000.0f);
+        }
 
         // Moves g_vignetteCurrent toward a_target at a constant rate,
         // independent of frame rate. Returns true while still transitioning
@@ -152,6 +160,8 @@ namespace PostProcessing
             // Hook_SetupTechnique.
             dst->vignette = postProcessing.vignetteSneakOnly ? g_vignetteCurrent : postProcessing.vignette;
             dst->postProcessingEnabled = postProcessing.enabled ? 1.0f : 0.0f;
+            dst->filmGrain = postProcessing.filmGrain;
+            dst->grainTime = GrainTime();
 
             context->Unmap(static_cast<REX::W32::ID3D11Resource*>(g_settingsBuffer), 0);
         }
@@ -337,6 +347,9 @@ namespace PostProcessing
                 } else {
                     g_vignetteCurrent = settings.postProcessing.vignette;
                 }
+
+                if (settings.postProcessing.filmGrain > 0.0f)
+                    UpdateSettingsBuffer(settings);
             }
 
             return result;

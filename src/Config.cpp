@@ -75,6 +75,7 @@ namespace
         section.vignette = static_cast<float>(ini.GetDoubleValue("PostProcessing", "Vignette", section.vignette));
         section.vignetteSneakOnly =
             ini.GetBoolValue("PostProcessing", "VignetteSneakOnly", section.vignetteSneakOnly);
+        section.filmGrain = static_cast<float>(ini.GetDoubleValue("PostProcessing", "FilmGrain", section.filmGrain));
         section.lutName = ini.GetValue("PostProcessing", "LUT", section.lutName.c_str());
         section.lutStrength =
             static_cast<float>(ini.GetDoubleValue("PostProcessing", "LUTStrength", section.lutStrength));
@@ -92,6 +93,7 @@ namespace
         ini.SetDoubleValue("PostProcessing", "MotionBlurStrength", section.motionBlurStrength);
         ini.SetDoubleValue("PostProcessing", "Vignette", section.vignette);
         ini.SetBoolValue("PostProcessing", "VignetteSneakOnly", section.vignetteSneakOnly);
+        ini.SetDoubleValue("PostProcessing", "FilmGrain", section.filmGrain);
         ini.SetValue("PostProcessing", "LUT", section.lutName.c_str());
         ini.SetDoubleValue("PostProcessing", "LUTStrength", section.lutStrength);
     }
@@ -184,6 +186,7 @@ namespace
         pp.tonemapMethod = std::clamp(pp.tonemapMethod, 1u, 5u);
         pp.motionBlurStrength = std::clamp(pp.motionBlurStrength, 0.0f, 1.0f);
         pp.vignette = std::clamp(pp.vignette, 0.0f, 1.0f);
+        pp.filmGrain = std::clamp(pp.filmGrain, 0.0f, 1.0f);
         pp.lutStrength = std::clamp(pp.lutStrength, 0.0f, 1.0f);
         // A name, not a path.
         if (pp.lutName.find_first_of("/\\") != std::string::npos || pp.lutName.find("..") != std::string::npos) {
