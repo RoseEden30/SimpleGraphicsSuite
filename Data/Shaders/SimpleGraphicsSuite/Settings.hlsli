@@ -21,7 +21,7 @@ cbuffer SimpleGraphicsSuiteSettings : register(b13)
 	float SGS_PostProcessingEnabled;  // gates only the ENB grading, see main()'s Vanilla() fallback
 	float SGS_FilmGrain;       // 0.0-1.0, 0=off
 	float SGS_GrainTime;       // seconds, wraps
-	float SGS_Reserved3;
+	float SGS_LensFlare;       // 0.0-1.0, 0=off
 	float SGS_Reserved4;
 };
 

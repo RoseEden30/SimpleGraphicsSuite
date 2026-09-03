@@ -386,6 +386,45 @@ float3 ApplyFilmGrain(float3 color, float2 uv, float time, float strength)
 	return color + noise * strength * 0.1;
 }
 
+// A soft, thresholded blob instead of a sharp point sample - otherwise a
+// ghost just reads as a small copy of the scene, not a light artifact.
+float3 SampleBrightBlurred(float2 uv, float threshold)
+{
+	static const float2 kOffsets[4] = { float2(1, 1), float2(-1, 1), float2(1, -1), float2(-1, -1) };
+	const float2        texel = float2(SCREEN_INV_WIDTH, SCREEN_INV_HEIGHT) * 8.0;
+
+	float3 sum = TextureColor.Sample(TextureColorSampler, uv).rgb;
+	[unroll]
+	for (int i = 0; i < 4; ++i)
+		sum += TextureColor.Sample(TextureColorSampler, uv + kOffsets[i] * texel).rgb;
+	sum *= 0.2;
+
+	return sum * saturate(dot(sum, K_LUM) - threshold);
+}
+
+float3 ApplyLensFlare(float3 color, float2 uv, float greyAdapt, float strength)
+{
+	static const float  scales[4] = { -1.5, 2.5, -5.0, 0.7 };
+	static const float3 tints[4] = {
+		float3(1.0, 0.8, 0.4), float3(0.8, 1.0, 0.9), float3(0.6, 0.8, 1.0), float3(1.0, 0.6, 0.6)
+	};
+	const float threshold = greyAdapt * 10.0;
+
+	float3 flare = 0.0;
+	[unroll]
+	for (int i = 0; i < 4; ++i)
+	{
+		float2 ghostVector = (uv - 0.5) * scales[i];
+		float3 sampleColor = SampleBrightBlurred(ghostVector + 0.5, threshold);
+
+		float edgeMask = saturate(1.0 - length(ghostVector));
+
+		flare += sampleColor * tints[i] * edgeMask;
+	}
+
+	return color + flare * strength * 0.18;
+}
+
 PS_OUTPUT main(PS_INPUT input)
 {
 	//------------------------- Shader Parameters Stage ------------------------//
@@ -576,6 +615,7 @@ PS_OUTPUT main(PS_INPUT input)
 	}
 
 	Color = SGS_ApplyLUT(LUTTexture, LUTSampler, Color, SGS_LUTStrength, SGS_LUTSize);
+	Color = ApplyLensFlare(Color, input.TexCoord.xy, IN.GreyAdapt, SGS_LensFlare);
 	Color = ApplyVignette(Color, input.TexCoord.xy, SGS_Vignette);
 	Color = ApplyFilmGrain(Color, input.TexCoord.xy, SGS_GrainTime, SGS_FilmGrain);
 

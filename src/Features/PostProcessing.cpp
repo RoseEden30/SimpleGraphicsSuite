@@ -45,7 +45,7 @@ namespace PostProcessing
             float postProcessingEnabled;  // gates only the ENB grading block, see SGS_PostProcessingEnabled
             float filmGrain;
             float grainTime;
-            float reserved3;
+            float lensFlare;
             float reserved4;
         };
         static_assert(sizeof(SettingsCB) == 64);
@@ -162,6 +162,7 @@ namespace PostProcessing
             dst->postProcessingEnabled = postProcessing.enabled ? 1.0f : 0.0f;
             dst->filmGrain = postProcessing.filmGrain;
             dst->grainTime = GrainTime();
+            dst->lensFlare = postProcessing.lensFlare;
 
             context->Unmap(static_cast<REX::W32::ID3D11Resource*>(g_settingsBuffer), 0);
         }

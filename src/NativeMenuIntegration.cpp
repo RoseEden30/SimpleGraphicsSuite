@@ -41,6 +41,14 @@ namespace NativeMenuIntegration
             RequestSaveSettings();
         }
 
+        float __stdcall GetLensFlare() { return ActiveSettings()->postProcessing.lensFlare; }
+        void  __stdcall SetLensFlare(float a_value)
+        {
+            EditableSettings().postProcessing.lensFlare = a_value;
+            PublishSettings();
+            RequestSaveSettings();
+        }
+
         float __stdcall GetSharpening() { return ActiveSettings()->postProcessing.sharpening; }
         void  __stdcall SetSharpening(float a_value)
         {
@@ -593,6 +601,8 @@ namespace NativeMenuIntegration
                 0.5f, {}, &IsGradingEnabled, &FormatDecimal2, "$SGS_BLOOM_INTENSITY_DESC", &OnSettingCommit);
             AddVanillaSetting("$SGS_EFFECTS_TAB", Type::kSlider, "$SGS_FILM_GRAIN", &GetFilmGrain, &SetFilmGrain,
                 0.0f, {}, nullptr, nullptr, "$SGS_FILM_GRAIN_DESC", &OnSettingCommit);
+            AddVanillaSetting("$SGS_EFFECTS_TAB", Type::kSlider, "$SGS_LENS_FLARE", &GetLensFlare, &SetLensFlare,
+                0.0f, {}, nullptr, nullptr, "$SGS_LENS_FLARE_DESC", &OnSettingCommit);
 
             // Same static-option-list constraint as every other dropdown -
             // picking up files dropped in after this scan needs a restart.
