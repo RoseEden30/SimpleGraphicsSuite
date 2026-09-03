@@ -93,10 +93,6 @@ SamplerState       LUTSampler : register(s8);
 Texture2D<float2> TextureMotionVector : register(t7);
 Texture2D<float4> TextureDepth : register(t9);
 
-// Bloom.cpp writes here. Same reason as the two above: a slot the technique
-// doesn't already own, so the engine's own binds can't overwrite it.
-Texture2D<float4> TextureEnhancedBloom : register(t10);
-
 cbuffer cb2 : register(b2)
 {
 #ifdef FADE
@@ -485,9 +481,7 @@ PS_OUTPUT main(PS_INPUT input)
 	if (SGS_PostProcessingEnabled > 0.5) {
 		bool scaleBloom = (0.5 <= Params01[0].x);
 		float bloomFactor = Params01[2].x;
-		float3 Bloom = SGS_BloomEnhanced > 0.5
-			? TextureEnhancedBloom.Sample(TextureBloomSampler, input.TexCoord.xy).rgb
-			: TextureBloom.Sample(TextureBloomSampler, (scaleBloom) ? scaledUV.xy : input.TexCoord.xy).rgb;
+		float3 Bloom = TextureBloom.Sample(TextureBloomSampler, (scaleBloom) ? scaledUV.xy : input.TexCoord.xy).rgb;
 
 		//------------------------- Apply Game Imagespace and HDR Color Grading ------------------------//
 
@@ -515,13 +509,6 @@ PS_OUTPUT main(PS_INPUT input)
 
 		//----------------------------------- Bloom Mixing -----------------------------------//
 
-		// Our own chain is built from the raw scene colour, so it has to take
-		// the adaptation scale Color just took. Summing the two without it
-		// leaves the glow 5-10x short of what it is being added to, which the
-		// tonemap shoulder then swallows everywhere but a near-black frame.
-		if (SGS_BloomEnhanced > 0.5)
-			Bloom /= lerp(1.0, IN.GreyAdapt, SETTING_UI_AdaptationMix);
-
 		#if EBM_ENABLE
 			Bloom  = zerolim(lerp(dot(Bloom, K_LUM), Bloom, IN.UIB_Saturation));
 			Bloom *= IN.UIB_BloomTint;
@@ -529,18 +516,9 @@ PS_OUTPUT main(PS_INPUT input)
 			Bloom  = lerp(Bloom, Bloom * Bloom, IN.UIB_Contrast);
 		#endif
 
-		// The fade-to-color blend below only clamps the final Color, which is
-		// already saturated to 1.0 by then - a bloomed pixel resists fading no
-		// faster than an unbloomed one once both are pegged at white. Scaling
-		// Bloom down with the same weight keeps it from outlasting the fade.
-		#ifdef FADE
-			Bloom *= 1.0 - IN.UIAGIS_Fade;
-		#endif
-
-		// bloomFactor is the imagespace's own blend amount, which is near zero
-		// in a lot of cells. Our own chain is already bright-passed and scaled,
-		// so it goes in whole rather than through that gate.
-		Color += Bloom * (SGS_BloomEnhanced > 0.5 ? 1.0 : saturate(bloomFactor));
+		// Matches upstream - bloomFactor going to 0 is how the engine already
+		// fades bloom out on its own, cell transitions included.
+		Color += Bloom * saturate(bloomFactor);
 
 		//----------------------------------- Selectable Tonemapping -----------------------------------//
 

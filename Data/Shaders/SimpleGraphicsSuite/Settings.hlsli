@@ -19,8 +19,8 @@ cbuffer SimpleGraphicsSuiteSettings : register(b13)
 	float SGS_TonemapMethod;  // 1=channel, 2=peak, 3=average luma, 4=Frostbyte, 5=ACES
 	float SGS_Vignette;       // 0.0-1.0, 0=off
 	float SGS_PostProcessingEnabled;  // gates only the ENB grading, see main()'s Vanilla() fallback
-	float SGS_BloomEnhanced;  // 1 when Bloom.cpp supplies TextureBloom
-	float SGS_Reserved2;      // pad to a 16-byte cbuffer row - keep in sync with SettingsCB
+	float SGS_Reserved1;  // pad to a 16-byte cbuffer row - keep in sync with SettingsCB
+	float SGS_Reserved2;
 	float SGS_Reserved3;
 	float SGS_Reserved4;
 };

@@ -1,11 +1,11 @@
 #include "PostProcessing.h"
 
 #include "Config.h"
+#include "PresentHook.h"
 #include "VTablePatch.h"
 
 #include "Features/DLSS.h"
 #include "Features/LUT.h"
-#include "Features/Bloom.h"
 #include "Features/Upscaling.h"
 
 #include <algorithm>
@@ -43,8 +43,8 @@ namespace PostProcessing
             float tonemapMethod;
             float vignette;
             float postProcessingEnabled;  // gates only the ENB grading block, see SGS_PostProcessingEnabled
-            float bloomEnhanced;
-            float reserved2;  // pads to a 16-byte cbuffer row - keep in sync with Settings.hlsli
+            float reserved1;  // pads to a 16-byte cbuffer row - keep in sync with Settings.hlsli
+            float reserved2;
             float reserved3;
             float reserved4;
         };
@@ -62,8 +62,17 @@ namespace PostProcessing
         // the motion blur SRV binding below.
         bool g_motionBlurSuppressedByMenu = false;
 
-        // Whether our own bloom chain produced this frame's TextureBloom.
-        bool g_bloomEnhanced = false;
+        // Cached once per frame from OnPrePresent - avoids repeated
+        // IsMenuOpen queries on every SetupTechnique call.
+        bool g_pausedByMenu = false;
+        bool g_loadingMenuOpen = false;
+
+        void OnPrePresent(REX::W32::ID3D11Device*, REX::W32::ID3D11DeviceContext*, REX::W32::IDXGISwapChain*)
+        {
+            auto* ui = RE::UI::GetSingleton();
+            g_pausedByMenu = ui && ui->GameIsPaused();
+            g_loadingMenuOpen = ui && ui->IsMenuOpen(RE::LoadingMenu::MENU_NAME);
+        }
 
         // How long a full 0<->target vignette transition takes, fading
         // rather than snapping instantly when sneak state changes.
@@ -143,8 +152,6 @@ namespace PostProcessing
             // Hook_SetupTechnique.
             dst->vignette = postProcessing.vignetteSneakOnly ? g_vignetteCurrent : postProcessing.vignette;
             dst->postProcessingEnabled = postProcessing.enabled ? 1.0f : 0.0f;
-            // Set by ApplyBloom once it knows the chain actually ran.
-            dst->bloomEnhanced = g_bloomEnhanced ? 1.0f : 0.0f;
 
             context->Unmap(static_cast<REX::W32::ID3D11Resource*>(g_settingsBuffer), 0);
         }
@@ -234,138 +241,6 @@ namespace PostProcessing
         using SetupTechnique_t = bool (*)(RE::BSShader*, std::uint32_t);
         std::unordered_map<void*, SetupTechnique_t> g_patchedVtables;
 
-        // Our passes necessarily change RTV/viewport/shaders/SRVs/samplers, and
-        // the tonemap draw that follows has to see the engine's own state back.
-        struct SavedPipelineState
-        {
-            REX::W32::ID3D11DeviceContext*      context;
-            REX::W32::ID3D11RenderTargetView*   rtv = nullptr;
-            REX::W32::ID3D11DepthStencilView*   dsv = nullptr;
-            REX::W32::D3D11_VIEWPORT            viewport{};
-            REX::W32::ID3D11VertexShader*       vs = nullptr;
-            REX::W32::ID3D11PixelShader*        ps = nullptr;
-            REX::W32::D3D11_PRIMITIVE_TOPOLOGY  topology{};
-            REX::W32::ID3D11ShaderResourceView* srvs[3]{};
-            REX::W32::ID3D11SamplerState*       samplers[2]{};
-            // b0 is the engine's own PerTechnique slot, and the bloom chain
-            // binds its constants there.
-            REX::W32::ID3D11Buffer*             constantBuffer0 = nullptr;
-
-            explicit SavedPipelineState(REX::W32::ID3D11DeviceContext* a_context) :
-                context(a_context)
-            {
-                context->PSGetConstantBuffers(0, 1, &constantBuffer0);
-                context->OMGetRenderTargets(1, &rtv, &dsv);
-                std::uint32_t viewportCount = 1;
-                context->RSGetViewports(&viewportCount, &viewport);
-                context->VSGetShader(&vs, nullptr, nullptr);
-                context->PSGetShader(&ps, nullptr, nullptr);
-                context->IAGetPrimitiveTopology(&topology);
-                context->PSGetShaderResources(0, 3, srvs);
-                context->PSGetSamplers(0, 2, samplers);
-            }
-
-            ~SavedPipelineState()
-            {
-                context->OMSetRenderTargets(1, &rtv, dsv);
-                context->RSSetViewports(1, &viewport);
-                context->VSSetShader(vs, nullptr, 0);
-                context->PSSetShader(ps, nullptr, 0);
-                context->IASetPrimitiveTopology(topology);
-                context->PSSetShaderResources(0, 3, srvs);
-                context->PSSetSamplers(0, 2, samplers);
-                context->PSSetConstantBuffers(0, 1, &constantBuffer0);
-
-                if (constantBuffer0)
-                    constantBuffer0->Release();
-                if (rtv)
-                    rtv->Release();
-                if (dsv)
-                    dsv->Release();
-                if (vs)
-                    vs->Release();
-                if (ps)
-                    ps->Release();
-                for (auto* srv : srvs)
-                    if (srv)
-                        srv->Release();
-                for (auto* sampler : samplers)
-                    if (sampler)
-                        sampler->Release();
-            }
-
-            SavedPipelineState(const SavedPipelineState&) = delete;
-            SavedPipelineState& operator=(const SavedPipelineState&) = delete;
-        };
-
-        // Builds the glow off the colour the tonemap draw is about to read and
-        // binds it as TextureEnhancedBloom (t10), in place of the engine's own.
-        void ApplyBloom(REX::W32::ID3D11DeviceContext* a_context, const Settings& a_settings)
-        {
-            auto* ui = RE::UI::GetSingleton();
-            const bool loadingMenuOpen = ui && ui->IsMenuOpen(RE::LoadingMenu::MENU_NAME);
-            const bool wanted =
-                a_settings.masterEnabled && a_settings.postProcessing.enabled &&
-                a_settings.postProcessing.bloomIntensity > 0.0f && !loadingMenuOpen;
-            if (!wanted) {
-                if (g_bloomEnhanced) {
-                    g_bloomEnhanced = false;
-                    UpdateSettingsBuffer(a_settings);
-                    // t10 would otherwise stay bound after this technique stops drawing.
-                    REX::W32::ID3D11ShaderResourceView* null = nullptr;
-                    a_context->PSSetShaderResources(10, 1, &null);
-                }
-                return;
-            }
-
-            // Straight off kMAIN rather than whatever sits at t1: the engine
-            // binds its textures after SetupTechnique returns, so reading the
-            // pipeline here gets the previous draw's state.
-            auto* colorSRV = reinterpret_cast<REX::W32::ID3D11ShaderResourceView*>(
-                RE::BSGraphics::Renderer::GetSingleton()->GetRuntimeData().renderTargets[RE::RENDER_TARGETS::kMAIN].SRV);
-            if (!colorSRV) {
-                static bool loggedOnce = false;
-                if (!loggedOnce) {
-                    logger::warn("Bloom: kMAIN has no shader resource view - keeping the engine's own bloom");
-                    loggedOnce = true;
-                }
-                return;
-            }
-
-            const auto screenSize = RE::BSGraphics::Renderer::GetScreenSize();
-
-            REX::W32::ID3D11ShaderResourceView* result = nullptr;
-            bool                                applied = false;
-            {
-                SavedPipelineState saved{ a_context };
-                applied = Bloom::Apply(colorSRV, screenSize.width, screenSize.height, &result);
-            }
-
-            // The shader only skips the imagespace's own gate once the chain
-            // has actually produced something.
-            if (applied != g_bloomEnhanced) {
-                g_bloomEnhanced = applied;
-                UpdateSettingsBuffer(a_settings);
-            }
-
-            if (applied && result) {
-                a_context->PSSetShaderResources(10, 1, &result);
-                static bool loggedOnce = false;
-                if (!loggedOnce) {
-                    logger::info("Bloom: applied successfully");
-                    loggedOnce = true;
-                }
-            } else if (!applied) {
-                REX::W32::ID3D11ShaderResourceView* null = nullptr;
-                a_context->PSSetShaderResources(10, 1, &null);
-                static bool loggedFailureOnce = false;
-                if (!loggedFailureOnce) {
-                    logger::warn("Bloom: enabled but failed to apply - see earlier Bloom errors in the log");
-                    loggedFailureOnce = true;
-                }
-            }
-        }
-
         // Runs before the vanilla chain (bloom, SAO, tonemap) starts, since
         // those read kMAIN directly and need the resolved, de-jittered result.
         // Substituting a texture at tonemap time instead leaves every earlier
@@ -373,7 +248,8 @@ namespace PostProcessing
         void ApplyDLSS()
         {
             const auto settings = ActiveSettings();
-            if (!settings->masterEnabled || !settings->antiAliasing.enabled || settings->antiAliasing.method != 2)
+            if (!settings->masterEnabled || !settings->antiAliasing.enabled || settings->antiAliasing.method != 2 ||
+                g_loadingMenuOpen)
                 return;
 
             auto& main = RE::BSGraphics::Renderer::GetSingleton()->GetRuntimeData().renderTargets[RE::RENDER_TARGETS::kMAIN];
@@ -423,8 +299,6 @@ namespace PostProcessing
                 const auto  settingsPtr = ActiveSettings();
                 const auto& settings = *settingsPtr;
 
-                ApplyBloom(runtimeData.context, settings);
-
                 if (auto* lutSRV = reinterpret_cast<REX::W32::ID3D11ShaderResourceView*>(LUT::CurrentSRV())) {
                     auto* lutSampler = reinterpret_cast<REX::W32::ID3D11SamplerState*>(LUT::Sampler());
                     runtimeData.context->PSSetShaderResources(8, 1, &lutSRV);
@@ -436,14 +310,12 @@ namespace PostProcessing
                 // paused: the map and the wait menu move the scene far more
                 // than gameplay does, which reads as smearing.
                 {
-                    auto*      ui = RE::UI::GetSingleton();
-                    const bool pausedByMenu = ui && ui->GameIsPaused();
-                    if (pausedByMenu != g_motionBlurSuppressedByMenu) {
-                        g_motionBlurSuppressedByMenu = pausedByMenu;
+                    if (g_pausedByMenu != g_motionBlurSuppressedByMenu) {
+                        g_motionBlurSuppressedByMenu = g_pausedByMenu;
                         UpdateSettingsBuffer(settings);
                     }
 
-                    if (settings.masterEnabled && settings.postProcessing.motionBlurStrength > 0.0f && !pausedByMenu) {
+                    if (settings.masterEnabled && settings.postProcessing.motionBlurStrength > 0.0f && !g_pausedByMenu) {
                         auto* motionSRV = reinterpret_cast<REX::W32::ID3D11ShaderResourceView*>(
                             runtimeData.renderTargets[RE::RENDER_TARGETS::kMOTION_VECTOR].SRV);
                         runtimeData.context->PSSetShaderResources(7, 1, &motionSRV);
@@ -657,5 +529,7 @@ namespace PostProcessing
         logger::info("Post-processing shader hook installed");
 
         RegisterPublishCallback(&Reapply);
+        if (PresentHook::Install())
+            PresentHook::RegisterPrePresent(&OnPrePresent);
     }
 }

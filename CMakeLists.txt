@@ -60,7 +60,6 @@ add_commonlibsse_plugin(
         src/Streamline.cpp
         src/Features/Accessibility.cpp
         src/Features/AntiAliasing.cpp
-        src/Features/Bloom.cpp
         src/Features/Debug.cpp
         src/Features/LUT.cpp
         src/Features/Reflex.cpp
