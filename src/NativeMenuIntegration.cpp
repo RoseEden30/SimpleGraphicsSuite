@@ -217,6 +217,14 @@ namespace NativeMenuIntegration
         // The whole pass is skipped in Off mode.
         bool __stdcall IsColorblindStrengthEnabled() { return ActiveSettings()->accessibility.colorblindMode != 0; }
 
+        float __stdcall GetHighContrastStrength() { return ActiveSettings()->accessibility.highContrastStrength; }
+        void  __stdcall SetHighContrastStrength(float a_value)
+        {
+            EditableSettings().accessibility.highContrastStrength = a_value;
+            PublishSettings();
+            RequestSaveSettings();
+        }
+
         float __stdcall GetReflexEnabled() { return ActiveSettings()->reflex.enabled ? 1.0f : 0.0f; }
         void  __stdcall SetReflexEnabled(float a_value)
         {
@@ -561,6 +569,8 @@ namespace NativeMenuIntegration
         AddVanillaSetting("$SGS_ACCESSIBILITY_TAB", Type::kSlider, "$SGS_COLORBLIND_STRENGTH", &GetColorblindStrength,
             &SetColorblindStrength, 1.0f, {}, &IsColorblindStrengthEnabled, nullptr,
             "$SGS_COLORBLIND_STRENGTH_DESC", &OnSettingCommit);
+        AddVanillaSetting("$SGS_ACCESSIBILITY_TAB", Type::kSlider, "$SGS_HIGH_CONTRAST", &GetHighContrastStrength,
+            &SetHighContrastStrength, 0.0f, {}, nullptr, nullptr, "$SGS_HIGH_CONTRAST_DESC", &OnSettingCommit);
 
         if (reflex) {
             AddVanillaSetting("$SGS_PERFORMANCE_TAB", Type::kCheckbox, "$SGS_ENABLED", &GetReflexEnabled, &SetReflexEnabled, 1.0f, {},

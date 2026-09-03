@@ -88,6 +88,7 @@ struct Settings
         // 0=Off, 1=Protanopia, 2=Deuteranopia, 3=Tritanopia, 4=Grayscale (debug).
         std::uint32_t colorblindMode = 0;
         float         colorblindStrength = 1.0f;  // 0.0-1.0
+        float         highContrastStrength = 0.0f;  // 0.0-1.0, 0 = off
 
         bool operator==(const Accessibility&) const = default;
     } accessibility;

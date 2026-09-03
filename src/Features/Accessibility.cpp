@@ -12,12 +12,12 @@ namespace Accessibility
         {
             float colorblindMode;
             float colorblindStrength;
-            float reserved0;
+            float highContrastStrength;
             float reserved1;
         };
         static_assert(sizeof(SettingsCB) == 16);
 
-        REX::W32::ID3D11PixelShader*  g_daltonizePS = nullptr;
+        REX::W32::ID3D11PixelShader*  g_accessibilityPS = nullptr;
         REX::W32::ID3D11SamplerState* g_sampler = nullptr;
         REX::W32::ID3D11Buffer*       g_settingsBuffer = nullptr;
 
@@ -31,14 +31,14 @@ namespace Accessibility
 
         bool EnsureStaticResources()
         {
-            if (g_daltonizePS && g_sampler && g_settingsBuffer)
+            if (g_accessibilityPS && g_sampler && g_settingsBuffer)
                 return true;
 
             auto* device = RE::BSGraphics::Renderer::GetSingleton()->GetRuntimeData().forwarder;
 
-            if (!g_daltonizePS)
-                g_daltonizePS =
-                    RenderPass::CompilePixelShader("Data/Shaders/SimpleGraphicsSuite/Daltonize.hlsl");
+            if (!g_accessibilityPS)
+                g_accessibilityPS =
+                    RenderPass::CompilePixelShader("Data/Shaders/SimpleGraphicsSuite/Accessibility.hlsl");
 
             if (!g_sampler) {
                 REX::W32::D3D11_SAMPLER_DESC desc{};
@@ -61,10 +61,10 @@ namespace Accessibility
                     logger::error("Accessibility: couldn't create the settings constant buffer");
             }
 
-            if (!g_daltonizePS)
-                logger::warn("Accessibility: Daltonize shader failed to compile - colorblind filter disabled");
+            if (!g_accessibilityPS)
+                logger::warn("Accessibility: shader failed to compile - filters disabled");
 
-            return g_daltonizePS && g_sampler && g_settingsBuffer;
+            return g_accessibilityPS && g_sampler && g_settingsBuffer;
         }
 
         void ReleaseCopyTexture()
@@ -122,7 +122,8 @@ namespace Accessibility
             REX::W32::ID3D11Device* a_device, REX::W32::ID3D11DeviceContext* a_context, REX::W32::IDXGISwapChain* a_swapChain)
         {
             const auto settings = ActiveSettings();
-            if (!settings->masterEnabled || settings->accessibility.colorblindMode == 0)
+            const auto& access = settings->accessibility;
+            if (!settings->masterEnabled || (access.colorblindMode == 0 && access.highContrastStrength <= 0.0f))
                 return;
 
             if (!EnsureStaticResources())
@@ -156,13 +157,14 @@ namespace Accessibility
             if (SUCCEEDED(a_context->Map(
                     static_cast<REX::W32::ID3D11Resource*>(g_settingsBuffer), 0, REX::W32::D3D11_MAP_WRITE_DISCARD, 0, &mapped))) {
                 auto* dst = static_cast<SettingsCB*>(mapped.data);
-                dst->colorblindMode = static_cast<float>(settings->accessibility.colorblindMode);
-                dst->colorblindStrength = settings->accessibility.colorblindStrength;
+                dst->colorblindMode = static_cast<float>(access.colorblindMode);
+                dst->colorblindStrength = access.colorblindStrength;
+                dst->highContrastStrength = access.highContrastStrength;
                 a_context->Unmap(static_cast<REX::W32::ID3D11Resource*>(g_settingsBuffer), 0);
             }
             a_context->PSSetConstantBuffers(0, 1, &g_settingsBuffer);
 
-            RenderPass::Draw(backBufferRTV, backBufferDesc.width, backBufferDesc.height, g_daltonizePS, { g_copySRV },
+            RenderPass::Draw(backBufferRTV, backBufferDesc.width, backBufferDesc.height, g_accessibilityPS, { g_copySRV },
                 { g_sampler });
 
             backBufferRTV->Release();
@@ -173,7 +175,7 @@ namespace Accessibility
     void InstallHooks()
     {
         if (!PresentHook::Install()) {
-            logger::error("Accessibility: couldn't install the Present hook - colorblind filter disabled");
+            logger::error("Accessibility: couldn't install the Present hook - filters disabled");
             return;
         }
         PresentHook::RegisterPrePresent(OnPrePresent);

@@ -143,12 +143,15 @@ namespace
             static_cast<std::uint32_t>(ini.GetLongValue("Accessibility", "ColorblindMode", section.colorblindMode));
         section.colorblindStrength =
             static_cast<float>(ini.GetDoubleValue("Accessibility", "ColorblindStrength", section.colorblindStrength));
+        section.highContrastStrength =
+            static_cast<float>(ini.GetDoubleValue("Accessibility", "HighContrastStrength", section.highContrastStrength));
     }
 
     void WriteAccessibility(CSimpleIniA& ini, const Settings::Accessibility& section)
     {
         ini.SetLongValue("Accessibility", "ColorblindMode", static_cast<long>(section.colorblindMode));
         ini.SetDoubleValue("Accessibility", "ColorblindStrength", section.colorblindStrength);
+        ini.SetDoubleValue("Accessibility", "HighContrastStrength", section.highContrastStrength);
     }
 
     void ReadReflex(const CSimpleIniA& ini, Settings::Reflex& section)
@@ -204,6 +207,7 @@ namespace
         auto& access = settings.accessibility;
         access.colorblindMode = std::min(access.colorblindMode, 4u);
         access.colorblindStrength = std::clamp(access.colorblindStrength, 0.0f, 1.0f);
+        access.highContrastStrength = std::clamp(access.highContrastStrength, 0.0f, 1.0f);
 
         settings.reflex.fpsLimit = std::clamp(settings.reflex.fpsLimit, 30.0f, 240.0f);
     }
