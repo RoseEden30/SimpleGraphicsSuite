@@ -16,6 +16,9 @@ namespace Streamline
 
     bool IsAvailable();
 
+    // Per-adapter DLSS capability, set by SetDevice.
+    bool IsDLSSSupported();
+
     // Replaces a raw D3D11/DXGI interface pointer with Streamline's proxy in
     // place. Manual-hooking mode needs it to observe Present. Call it right
     // after the interface is created, before anything else uses it.

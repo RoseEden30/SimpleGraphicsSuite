@@ -8,6 +8,7 @@ namespace Streamline
     {
         bool       g_attempted = false;
         bool       g_available = false;
+        bool       g_dlssSupported = false;
         HMODULE    g_interposer = nullptr;
 
         PFun_slInit*                  s_slInit = nullptr;
@@ -117,6 +118,8 @@ namespace Streamline
 
     bool IsAvailable() { return g_available; }
 
+    bool IsDLSSSupported() { return g_dlssSupported; }
+
     sl::Result UpgradeInterface(void** a_interface)
     {
         return s_slUpgradeInterface ? s_slUpgradeInterface(a_interface) : sl::Result::eErrorNotInitialized;
@@ -144,6 +147,7 @@ namespace Streamline
             return;
         }
 
+        g_dlssSupported = true;
         logger::info("Streamline: DLSS available via Streamline");
     }
 

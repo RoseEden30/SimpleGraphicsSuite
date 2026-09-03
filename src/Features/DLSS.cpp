@@ -330,7 +330,7 @@ namespace DLSS
             reinterpret_cast<ID3D11Device*>(RE::BSGraphics::Renderer::GetSingleton()->GetRuntimeData().forwarder);
 
         Streamline::EnsureInitialized();
-        g_supported = Streamline::IsAvailable();
+        g_supported = Streamline::IsAvailable() && Streamline::IsDLSSSupported();
     }
 
     bool IsSupported() { return g_supported; }
