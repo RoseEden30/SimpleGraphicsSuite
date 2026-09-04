@@ -34,10 +34,14 @@ cmake --build build/release
 The third-party SDKs under `extern/` are not stored in this repository. Fetch
 them before configuring:
 
-- `extern/CommonLibSSE-NG` - `git clone --recurse-submodules https://github.com/alandtse/CommonLibSSE-NG.git extern/CommonLibSSE-NG`
+- `extern/CommonLibSSE-NG` - a git submodule, cloned separately (see below)
 - `extern/nvapi` - the NVIDIA NVAPI SDK (`nvapi.h`, headers, `amd64/nvapi64.lib`)
 - `extern/Streamline` - an NVIDIA Streamline SDK release, keeping its `include/`
   and `bin/x64/` layout
+
+```
+git clone --recurse-submodules https://github.com/alandtse/CommonLibSSE-NG.git extern/CommonLibSSE-NG
+```
 
 Run the two cmake commands from an **x64 Native Tools Command Prompt for
 VS 2022**, so the MSVC environment is set up.
@@ -52,7 +56,7 @@ Set `SKYRIM_MODS_FOLDER` or `SKYRIM_FOLDER` to deploy on every build.
 - AMD - [FidelityFX FSR1](https://github.com/GPUOpen-Effects/FidelityFX-FSR), EASU and RCAS.
 - NVIDIA - [Streamline](https://github.com/NVIDIA-RTX/Streamline) (DLAA goes through it, not the raw NGX SDK) and [NVAPI](https://github.com/NVIDIA/nvapi).
 - Krzysztof Narkowicz - the [ACES fitted curve](https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/).
-- Daltonization follows Machado, Oliveira and Fialho (2009) for the deficiency simulation and Fidaner, Lin and Ozguven (2005) for the correction.
+- Daltonization follows [Machado, Oliveira and Fernandes (2009)](https://www.inf.ufrgs.br/~oliveira/pubs_files/CVD_Simulation/CVD_Simulation.html) for the deficiency simulation and [Fidaner, Lin and Ozguven (2005)](http://scien.stanford.edu/class/psych221/projects/05/ofidaner/project_report.pdf) for the correction.
 
 ## License
 
