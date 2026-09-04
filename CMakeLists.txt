@@ -3,13 +3,13 @@
 
 cmake_minimum_required(VERSION 3.21)
 
-project(SimpleGraphicsSuite VERSION 1.0.0 LANGUAGES CXX)
+project(SimpleGraphicsSuite VERSION 1.0.1 LANGUAGES CXX)
 
 set(PLUGIN_AUTHOR "RoseEden" CACHE STRING "Author name baked into the plugin declaration")
 
 # Folder created under the mods folder. Separate from the project name so it can
 # carry a space without renaming the files.
-set(MOD_FOLDER_NAME "${PROJECT_NAME}" CACHE STRING "Folder name under SKYRIM_MODS_FOLDER")
+set(MOD_FOLDER_NAME "Simple Graphics Suite" CACHE STRING "Folder name under SKYRIM_MODS_FOLDER")
 
 # Output location, picked up from the environment so this file stays portable.
 # Set SKYRIM_FOLDER to a Skyrim Special Edition install, or SKYRIM_MODS_FOLDER

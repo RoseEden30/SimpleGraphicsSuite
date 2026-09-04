@@ -513,6 +513,13 @@ namespace NativeMenuIntegration
         // Keeps this mod's tabs together and ordered against other mods'.
         NativeSystemMenuFramework::SetModName("SimpleGraphicsSuite");
 
+        NativeSystemMenuFramework::SetVanillaTabDescription("$SGS_ACCESSIBILITY_TAB", "$SGS_ACCESSIBILITY_TAB_DESC");
+        NativeSystemMenuFramework::SetVanillaTabDescription("$SGS_PERFORMANCE_TAB", "$SGS_PERFORMANCE_TAB_DESC");
+        NativeSystemMenuFramework::SetVanillaTabDescription("$SGS_EFFECTS_TAB", "$SGS_EFFECTS_TAB_DESC");
+        NativeSystemMenuFramework::SetVanillaTabDescription("$SGS_LUT_TAB", "$SGS_LUT_TAB_DESC");
+        NativeSystemMenuFramework::SetVanillaTabDescription(
+            "$SGS_SIMPLE_GRAPHICS_SUITE_TAB", "$SGS_SIMPLE_GRAPHICS_SUITE_TAB_DESC");
+
         using NativeSystemMenuFramework::AddVanillaSetting;
         using Type = NativeSystemMenuFramework::SettingType;
 
