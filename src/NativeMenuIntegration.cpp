@@ -65,6 +65,14 @@ namespace NativeMenuIntegration
             RequestSaveSettings();
         }
 
+        float __stdcall GetContactShadows() { return ActiveSettings()->postProcessing.contactShadows ? 1.0f : 0.0f; }
+        void  __stdcall SetContactShadows(float a_value)
+        {
+            EditableSettings().postProcessing.contactShadows = a_value != 0.0f;
+            PublishSettings();
+            RequestSaveSettings();
+        }
+
         float __stdcall GetSharpening() { return ActiveSettings()->postProcessing.sharpening; }
         void  __stdcall SetSharpening(float a_value)
         {
@@ -566,6 +574,8 @@ namespace NativeMenuIntegration
                 "$SGS_VIGNETTE_SNEAK_ONLY_DESC", &OnSettingCommit);
             AddVanillaSetting("Display", Type::kSlider, "$SGS_SHARPENING", &GetSharpening, &SetSharpening, 0.0f, {},
                 nullptr, nullptr, "$SGS_SHARPENING_DESC", &OnSettingCommit);
+            AddVanillaSetting("Display", Type::kCheckbox, "$SGS_CONTACT_SHADOWS", &GetContactShadows,
+                &SetContactShadows, 0.0f, {}, nullptr, nullptr, "$SGS_CONTACT_SHADOWS_DESC", &OnSettingCommit);
         }
 
         if (antiAliasing) {

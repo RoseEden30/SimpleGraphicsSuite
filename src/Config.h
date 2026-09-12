@@ -52,6 +52,7 @@ struct Settings
         float lensFlare = 0.0f;  // 0.0-1.0, 0=off
         float distanceHaze = 0.0f;  // 0.0-1.0, 0=off
         float highlightGlow = 0.0f;  // 0.0-1.0, 0=off
+        bool contactShadows = false;
 
         // 3D color grading LUT (.cube), scanned from
         // Data/Shaders/SimpleGraphicsSuite/LUTs/ - empty name means none.

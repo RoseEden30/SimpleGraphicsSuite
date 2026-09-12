@@ -52,8 +52,24 @@ namespace PostProcessing
             float cameraFar;
             float highlightGlow;
             float tonemapExposureOffset;
+            float contactShadows;
+            float lightDirX;
+            float lightDirY;
+            float lightDirZ;
         };
-        static_assert(sizeof(SettingsCB) == 80);
+        static_assert(sizeof(SettingsCB) == 96);
+
+        // Matches SGS_CSLightData (Buffer<float4> at t10) in ContactShadows.hlsli.
+        constexpr std::size_t kMaxContactLights = 4;
+        struct ContactLightsCB
+        {
+            float lights[kMaxContactLights][4];  // xyz world pos, w range
+            float count;
+            float interior;
+            float pad0;
+            float pad1;
+        };
+        static_assert(sizeof(ContactLightsCB) == kMaxContactLights * 16 + 16);
 
         bool NeedsReplacedShader(const Settings& a_settings);  // defined near ApplyEnabled below
 
@@ -61,6 +77,21 @@ namespace PostProcessing
         {
             auto* player = RE::PlayerCharacter::GetSingleton();
             return player && player->IsSneaking();
+        }
+
+        RE::NiPoint3 SunDirectionWorld()
+        {
+            auto* ssn = RE::BSShaderManager::State::GetSingleton().shadowSceneNode[0];
+            if (!ssn)
+                return {};
+            auto* sunLight = ssn->GetRuntimeData().sunLight;
+            if (!sunLight)
+                return {};
+            auto* dirLight = skyrim_cast<RE::NiDirectionalLight*>(sunLight->light.get());
+            if (!dirLight)
+                return {};
+            const auto& worldDir = dirLight->GetWorldDirection();
+            return { -worldDir.x, -worldDir.y, -worldDir.z };
         }
 
         // Set from Hook_SetupTechnique, read by UpdateSettingsBuffer - see
@@ -114,22 +145,29 @@ namespace PostProcessing
         }
 
         REX::W32::ID3D11Buffer* g_settingsBuffer = nullptr;
+        REX::W32::ID3D11Buffer*             g_contactLightsBuffer = nullptr;
+        REX::W32::ID3D11ShaderResourceView* g_contactLightsSRV = nullptr;
 
-        void EnsureSettingsBuffer()
+        REX::W32::ID3D11Buffer* CreateDynamicCB(std::uint32_t a_byteWidth)
         {
-            if (g_settingsBuffer)
-                return;
-
             auto* device = RE::BSGraphics::Renderer::GetSingleton()->GetRuntimeData().forwarder;
 
             REX::W32::D3D11_BUFFER_DESC desc{};
-            desc.byteWidth = sizeof(SettingsCB);
+            desc.byteWidth = a_byteWidth;
             desc.usage = REX::W32::D3D11_USAGE_DYNAMIC;
             desc.bindFlags = REX::W32::D3D11_BIND_CONSTANT_BUFFER;
             desc.cpuAccessFlags = REX::W32::D3D11_CPU_ACCESS_WRITE;
 
-            if (FAILED(device->CreateBuffer(&desc, nullptr, &g_settingsBuffer)))
-                logger::error("Post-processing: couldn't create the settings constant buffer");
+            REX::W32::ID3D11Buffer* buffer = nullptr;
+            if (FAILED(device->CreateBuffer(&desc, nullptr, &buffer)))
+                logger::error("Post-processing: couldn't create a constant buffer");
+            return buffer;
+        }
+
+        void EnsureSettingsBuffer()
+        {
+            if (!g_settingsBuffer)
+                g_settingsBuffer = CreateDynamicCB(sizeof(SettingsCB));
         }
 
         void UpdateSettingsBuffer(const Settings& a_settings)
@@ -173,8 +211,121 @@ namespace PostProcessing
             dst->cameraNear = RE::BSGraphics::CameraNear();
             dst->cameraFar = RE::BSGraphics::CameraFar();
             dst->highlightGlow = postProcessing.highlightGlow;
+            // Fixed intensity behind the on/off toggle - kept subtle on purpose.
+            constexpr float kContactShadowStrength = 0.3f;
+            dst->contactShadows = postProcessing.contactShadows ? kContactShadowStrength : 0.0f;
+
+            const auto sunDir = postProcessing.contactShadows ? SunDirectionWorld() : RE::NiPoint3{};
+            dst->lightDirX = sunDir.x;
+            dst->lightDirY = sunDir.y;
+            dst->lightDirZ = sunDir.z;
 
             context->Unmap(static_cast<REX::W32::ID3D11Resource*>(g_settingsBuffer), 0);
+        }
+
+        // Nearest point lights to the camera, for indoor contact shadows.
+        void GatherContactLights(ContactLightsCB& a_data)
+        {
+            auto* ssn = RE::BSShaderManager::State::GetSingleton().shadowSceneNode[0];
+            if (!ssn)
+                return;
+
+            const auto& runtimeData = ssn->GetRuntimeData();
+            const auto  cameraPos = runtimeData.cameraPos;
+
+            struct Candidate
+            {
+                float        distance;
+                RE::NiPoint3 position;
+                float        range;
+            };
+            std::array<Candidate, kMaxContactLights> nearest{};
+            std::size_t                              found = 0;
+
+            for (const auto& light : runtimeData.activeLights) {
+                auto* bsLight = light.get();
+                if (!bsLight || !bsLight->pointLight || !bsLight->light)
+                    continue;
+
+                const float range = bsLight->light->GetLightRuntimeData().radius.x;
+                if (range <= 0.0f)
+                    continue;
+
+                const Candidate candidate{ cameraPos.GetDistance(bsLight->worldTranslate), bsLight->worldTranslate,
+                    range };
+
+                std::size_t slot = std::min(found, kMaxContactLights - 1);
+                if (found < kMaxContactLights)
+                    ++found;
+                else if (candidate.distance >= nearest[slot].distance)
+                    continue;
+
+                while (slot > 0 && candidate.distance < nearest[slot - 1].distance) {
+                    nearest[slot] = nearest[slot - 1];
+                    --slot;
+                }
+                nearest[slot] = candidate;
+            }
+
+            a_data.count = static_cast<float>(found);
+            for (std::size_t i = 0; i < found; ++i) {
+                a_data.lights[i][0] = nearest[i].position.x;
+                a_data.lights[i][1] = nearest[i].position.y;
+                a_data.lights[i][2] = nearest[i].position.z;
+                a_data.lights[i][3] = nearest[i].range;
+            }
+        }
+
+        // Dynamic buffer read as Buffer<float4> at t10, since b13 is the last
+        // constant-buffer slot the API allows and it is already taken.
+        void EnsureContactLightsBuffer()
+        {
+            if (g_contactLightsBuffer)
+                return;
+
+            auto* device = RE::BSGraphics::Renderer::GetSingleton()->GetRuntimeData().forwarder;
+
+            REX::W32::D3D11_BUFFER_DESC desc{};
+            desc.byteWidth = sizeof(ContactLightsCB);
+            desc.usage = REX::W32::D3D11_USAGE_DYNAMIC;
+            desc.bindFlags = REX::W32::D3D11_BIND_SHADER_RESOURCE;
+            desc.cpuAccessFlags = REX::W32::D3D11_CPU_ACCESS_WRITE;
+
+            if (FAILED(device->CreateBuffer(&desc, nullptr, &g_contactLightsBuffer))) {
+                logger::error("Post-processing: couldn't create the contact-light buffer");
+                return;
+            }
+
+            REX::W32::D3D11_SHADER_RESOURCE_VIEW_DESC srv{};
+            srv.format = REX::W32::DXGI_FORMAT_R32G32B32A32_FLOAT;
+            srv.viewDimension = REX::W32::D3D_SRV_DIMENSION_BUFFER;
+            srv.buffer.firstElement = 0;
+            srv.buffer.numElements = sizeof(ContactLightsCB) / 16;
+            if (FAILED(device->CreateShaderResourceView(
+                    static_cast<REX::W32::ID3D11Resource*>(g_contactLightsBuffer), &srv, &g_contactLightsSRV)))
+                logger::error("Post-processing: couldn't create the contact-light SRV");
+        }
+
+        void UpdateContactLightsBuffer()
+        {
+            EnsureContactLightsBuffer();
+            if (!g_contactLightsBuffer)
+                return;
+
+            ContactLightsCB data{};
+            auto*           sky = RE::Sky::GetSingleton();
+            const bool      interior = sky && sky->mode.get() == RE::Sky::Mode::kInterior;
+            data.interior = interior ? 1.0f : 0.0f;
+            if (interior)
+                GatherContactLights(data);
+
+            auto* context = RE::BSGraphics::Renderer::GetSingleton()->GetRuntimeData().context;
+            REX::W32::D3D11_MAPPED_SUBRESOURCE mapped{};
+            if (FAILED(context->Map(static_cast<REX::W32::ID3D11Resource*>(g_contactLightsBuffer), 0,
+                    REX::W32::D3D11_MAP_WRITE_DISCARD, 0, &mapped)))
+                return;
+            *static_cast<ContactLightsCB*>(mapped.data) = data;
+            context->Unmap(static_cast<REX::W32::ID3D11Resource*>(g_contactLightsBuffer), 0);
         }
 
         REX::W32::ID3D11PixelShader* CompilePixelShader(const std::filesystem::path& a_path)
@@ -343,12 +494,19 @@ namespace PostProcessing
                     }
 
                     if (settings.masterEnabled &&
-                        (settings.postProcessing.motionBlurStrength > 0.0f || settings.postProcessing.distanceHaze > 0.0f)) {
+                        (settings.postProcessing.motionBlurStrength > 0.0f || settings.postProcessing.distanceHaze > 0.0f ||
+                            settings.postProcessing.contactShadows)) {
                         auto& depthStencils = RE::BSGraphics::Renderer::GetSingleton()->GetDepthStencilData();
                         auto* depthSRV = reinterpret_cast<REX::W32::ID3D11ShaderResourceView*>(
                             depthStencils.depthStencils[RE::RENDER_TARGET_DEPTHSTENCIL::kMAIN].depthSRV);
                         runtimeData.context->PSSetShaderResources(9, 1, &depthSRV);
                     }
+                }
+
+                if (settings.masterEnabled && settings.postProcessing.contactShadows) {
+                    UpdateContactLightsBuffer();
+                    if (g_contactLightsSRV)
+                        runtimeData.context->PSSetShaderResources(10, 1, &g_contactLightsSRV);
                 }
 
                 // Fades in and out on a sneak/stand transition instead of
@@ -362,7 +520,7 @@ namespace PostProcessing
                     g_vignetteCurrent = settings.postProcessing.vignette;
                 }
 
-                if (settings.postProcessing.filmGrain > 0.0f)
+                if (settings.postProcessing.filmGrain > 0.0f || settings.postProcessing.contactShadows)
                     UpdateSettingsBuffer(settings);
             }
 
@@ -475,7 +633,7 @@ namespace PostProcessing
 
             const auto& pp = a_settings.postProcessing;
             return pp.enabled || pp.motionBlurStrength > 0.0f || pp.vignette > 0.0f || pp.sharpening > 0.0f ||
-                !pp.lutName.empty() ||
+                pp.contactShadows || !pp.lutName.empty() ||
                 a_settings.upscaling.enabled;
         }
 

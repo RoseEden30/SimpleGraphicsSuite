@@ -164,11 +164,13 @@ struct PS_OUTPUT
 #include "../SimpleGraphicsSuite/FSR1.hlsli"
 #include "../SimpleGraphicsSuite/LUT.hlsli"
 #include "../SimpleGraphicsSuite/MotionBlur.hlsli"
+#include "../SimpleGraphicsSuite/ContactShadows.hlsli"
 #include "../ISHDR/ictcp_colorspaces.fx"
 #else
 #include "SimpleGraphicsSuite/FSR1.hlsli"
 #include "SimpleGraphicsSuite/LUT.hlsli"
 #include "SimpleGraphicsSuite/MotionBlur.hlsli"
+#include "SimpleGraphicsSuite/ContactShadows.hlsli"
 #include "ictcp_colorspaces.fx"
 #endif
 
@@ -587,6 +589,20 @@ PS_OUTPUT main(PS_INPUT input)
 	// SGS_Sharpening is 0-1 (1=max); RCAS itself takes stops of backoff, 0=max.
 	Color = SGS_ApplyFSR1RCAS(TextureColor, TextureColorSampler, scaledUV, float2(SCREEN_INV_WIDTH, SCREEN_INV_HEIGHT),
 		Color, (1.0 - SGS_Sharpening) * 4.0);
+
+#ifndef VR
+	if (SGS_ContactShadows > 0.0) {
+		float contactShadow = SGS_ContactShadow(TextureDepth, TextureColorSampler,
+			input.TexCoord.xy, input.Position.xy,
+			DynamicRes_WidthX_HeightY_PreviousWidthZ_PreviousHeightW.xy,
+			float2(DynamicRes_InvWidthX_InvHeightY_WidthClampZ_HeightClampW.z,
+				DynamicRes_WidthX_HeightY_PreviousWidthZ_PreviousHeightW.y),
+			float3(SGS_LightDirX, SGS_LightDirY, SGS_LightDirZ),
+			ViewMatrix, ProjMatrix, InvProjMatrix,
+			SGS_CameraNear, SGS_CameraFar, SGS_ContactShadows);
+		Color *= contactShadow;
+	}
+#endif
 
 	// Used for imagespace tint below and as the dither seed at the end.
 	float Grey = dot(Color, K_LUM);

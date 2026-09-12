@@ -27,6 +27,10 @@ cbuffer SimpleGraphicsSuiteSettings : register(b13)
 	float SGS_CameraFar;
 	float SGS_HighlightGlow;  // 0.0-1.0, 0=off
 	float SGS_TonemapExposureOffset;  // stops, -2.0 to 2.0
+	float SGS_ContactShadows;  // 0.0-1.0, 0=off
+	float SGS_LightDirX;       // world-space direction toward the light
+	float SGS_LightDirY;
+	float SGS_LightDirZ;
 };
 
 #define SHARPENING_AMOUNT SGS_Sharpening
