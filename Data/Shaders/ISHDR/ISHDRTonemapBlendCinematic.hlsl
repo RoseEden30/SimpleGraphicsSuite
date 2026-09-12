@@ -391,6 +391,16 @@ float3 ApplyVignette(float3 color, float2 uv, float strength)
 	return lerp(color, color * vig, strength);
 }
 
+float3 ApplyHighlightGlow(float3 color, float2 uv, float strength)
+{
+	if (strength <= 0.0)
+		return color;
+
+	float3 bloom = TextureBloom.Sample(TextureBloomSampler, uv).rgb;
+	const float3 kGlowTint = float3(1.4, 0.75, 0.55);
+	return color + bloom * kGlowTint * strength * 0.4;
+}
+
 // Distant pixels desaturate and shift toward a cool haze tint - tuned by
 // eye, not physical.
 float3 ApplyDistanceHaze(float3 color, float rawDepth, float near, float far, float strength)
@@ -653,6 +663,7 @@ PS_OUTPUT main(PS_INPUT input)
 		float depth = TextureDepth.Sample(TextureColorSampler, scaledUV).x;
 		Color = ApplyDistanceHaze(Color, depth, SGS_CameraNear, SGS_CameraFar, SGS_DistanceHaze);
 	}
+	Color = ApplyHighlightGlow(Color, scaledUV, SGS_HighlightGlow);
 	Color = ApplyLensFlare(Color, input.TexCoord.xy, IN.GreyAdapt, SGS_LensFlare);
 	Color = ApplyVignette(Color, input.TexCoord.xy, SGS_Vignette);
 	Color = ApplyFilmGrain(Color, input.TexCoord.xy, SGS_GrainTime, SGS_FilmGrain);

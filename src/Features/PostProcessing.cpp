@@ -50,7 +50,7 @@ namespace PostProcessing
             float distanceHaze;
             float cameraNear;
             float cameraFar;
-            float reserved5;  // CreateBuffer needs a multiple of 16 bytes
+            float highlightGlow;
             float reserved6;
         };
         static_assert(sizeof(SettingsCB) == 80);
@@ -171,6 +171,7 @@ namespace PostProcessing
             dst->distanceHaze = postProcessing.distanceHaze;
             dst->cameraNear = RE::BSGraphics::CameraNear();
             dst->cameraFar = RE::BSGraphics::CameraFar();
+            dst->highlightGlow = postProcessing.highlightGlow;
 
             context->Unmap(static_cast<REX::W32::ID3D11Resource*>(g_settingsBuffer), 0);
         }

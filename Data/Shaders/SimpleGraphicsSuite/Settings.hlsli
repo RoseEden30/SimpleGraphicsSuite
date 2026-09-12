@@ -25,7 +25,7 @@ cbuffer SimpleGraphicsSuiteSettings : register(b13)
 	float SGS_DistanceHaze;  // 0.0-1.0, 0=off
 	float SGS_CameraNear;
 	float SGS_CameraFar;
-	float SGS_Reserved5;
+	float SGS_HighlightGlow;  // 0.0-1.0, 0=off
 	float SGS_Reserved6;
 };
 

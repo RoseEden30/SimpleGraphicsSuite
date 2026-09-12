@@ -79,6 +79,8 @@ namespace
         section.lensFlare = static_cast<float>(ini.GetDoubleValue("PostProcessing", "LensFlare", section.lensFlare));
         section.distanceHaze =
             static_cast<float>(ini.GetDoubleValue("PostProcessing", "DistanceHaze", section.distanceHaze));
+        section.highlightGlow =
+            static_cast<float>(ini.GetDoubleValue("PostProcessing", "HighlightGlow", section.highlightGlow));
         section.lutName = ini.GetValue("PostProcessing", "LUT", section.lutName.c_str());
         section.lutStrength =
             static_cast<float>(ini.GetDoubleValue("PostProcessing", "LUTStrength", section.lutStrength));
@@ -99,6 +101,7 @@ namespace
         ini.SetDoubleValue("PostProcessing", "FilmGrain", section.filmGrain);
         ini.SetDoubleValue("PostProcessing", "LensFlare", section.lensFlare);
         ini.SetDoubleValue("PostProcessing", "DistanceHaze", section.distanceHaze);
+        ini.SetDoubleValue("PostProcessing", "HighlightGlow", section.highlightGlow);
         ini.SetValue("PostProcessing", "LUT", section.lutName.c_str());
         ini.SetDoubleValue("PostProcessing", "LUTStrength", section.lutStrength);
     }
@@ -197,6 +200,7 @@ namespace
         pp.filmGrain = std::clamp(pp.filmGrain, 0.0f, 1.0f);
         pp.lensFlare = std::clamp(pp.lensFlare, 0.0f, 1.0f);
         pp.distanceHaze = std::clamp(pp.distanceHaze, 0.0f, 1.0f);
+        pp.highlightGlow = std::clamp(pp.highlightGlow, 0.0f, 1.0f);
         pp.lutStrength = std::clamp(pp.lutStrength, 0.0f, 1.0f);
         // A name, not a path.
         if (pp.lutName.find_first_of("/\\") != std::string::npos || pp.lutName.find("..") != std::string::npos) {
