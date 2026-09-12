@@ -41,17 +41,6 @@ namespace DLSS
         float CameraNear() { return *REL::Relocation<float*>(RELOCATION_ID(517032, 403540), 0x40); }
         float CameraFar() { return *REL::Relocation<float*>(RELOCATION_ID(517032, 403540), 0x44); }
 
-        // Republishes the per-frame DynamicResolutionParams cbuffer from the
-        // engine's own current dynamicResolutionWidthRatio/HeightRatio -
-        // verified against Community Shaders' own Upscaling.cpp, which calls
-        // this exact vanilla function right after its own upscale.
-        void UpdateCameraData()
-        {
-            using func_t = void();
-            static REL::Relocation<func_t> func{ RELOCATION_ID(75472, 77258) };
-            func();
-        }
-
         float VerticalFOVRad(std::uint32_t a_width, std::uint32_t a_height)
         {
             static REL::Relocation<float*> fovDeg{ RELOCATION_ID(513786, 388785) };
