@@ -36,8 +36,10 @@ struct Settings
         float bloomIntensity = 0.5f;  // 0.0-1.0, 0=off
 
         // 1=channel, 2=peak, 3=average luma, 4=Frostbyte hue preservation
-        // (the original mod's own default), 5=ACES.
+        // (the original mod's own default), 5=ACES, 6=AgX.
         std::uint32_t tonemapMethod = 4;
+
+        float tonemapExposureOffset = 0.0f;  // stops, -2.0 to 2.0
 
         float motionBlurStrength = 0.0f;  // 0.0-1.0, 0=off
 

@@ -51,7 +51,7 @@ namespace PostProcessing
             float cameraNear;
             float cameraFar;
             float highlightGlow;
-            float reserved6;
+            float tonemapExposureOffset;
         };
         static_assert(sizeof(SettingsCB) == 80);
 
@@ -160,6 +160,7 @@ namespace PostProcessing
             dst->lutStrength = LUT::CurrentSRV() ? postProcessing.lutStrength : 0.0f;
             dst->lutSize = static_cast<float>(LUT::CurrentSize());
             dst->tonemapMethod = static_cast<float>(postProcessing.tonemapMethod);
+            dst->tonemapExposureOffset = postProcessing.tonemapExposureOffset;
             // Sneak-only mode fades g_vignetteCurrent toward the target
             // instead of snapping - see StepVignette, driven per-frame from
             // Hook_SetupTechnique.

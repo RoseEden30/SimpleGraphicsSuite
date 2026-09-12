@@ -328,6 +328,31 @@ float3 ACESFilm(float3 x)
 	return saturate((x * (a * x + b)) / (x * (c * x + d) + e));
 }
 
+// Minimal AgX fit (Troy Sobotka / Blender's default view transform).
+float3 AgXTonemap(float3 color)
+{
+	const float3x3 kInset = float3x3(
+		0.856627153315983, 0.0951212405381588, 0.0482516061458583,
+		0.137318972929847, 0.761241990602591, 0.101439036467562,
+		0.11189821299995, 0.0767994186031903, 0.811302368396859);
+	const float3x3 kOutset = float3x3(
+		1.1271005818144368, -0.1413297634984383, -0.14132976349843826,
+		-0.11060664309660323, 1.157823702216272, -0.11060664309660294,
+		-0.016493938717834573, -0.016493938717834257, 1.2519364065950405);
+	const float kMinEv = -12.47393;
+	const float kMaxEv = 4.026069;
+
+	float3 val = mul(kInset, max(color, 0.0));
+	val = log2(max(val, 1e-10));
+	val = saturate((val - kMinEv) / (kMaxEv - kMinEv));
+
+	float3 x2 = val * val;
+	float3 x4 = x2 * x2;
+	val = 15.5 * x4 * x2 - 40.14 * x4 * val + 31.96 * x4 - 6.868 * x2 * val + 0.4298 * x2 + 0.1191 * val - 0.00232;
+
+	return saturate(mul(kOutset, val));
+}
+
 // TRI-DITHERING FUNCTION by SANDWICH-MAKER
 
 float rand11(float x) { return frac(x * 0.024390243); }
@@ -611,6 +636,8 @@ PS_OUTPUT main(PS_INPUT input)
 
 		//----------------------------------- Selectable Tonemapping -----------------------------------//
 
+		Color *= exp2(SGS_TonemapExposureOffset);
+
 		if (SGS_TonemapMethod < 1.5) {
 			Color = Tonemap(Color, IN.UITM);
 		} else if (SGS_TonemapMethod < 2.5) {
@@ -623,12 +650,14 @@ PS_OUTPUT main(PS_INPUT input)
 			Color *= Tonemap(Grey, IN.UITM);
 		} else if (SGS_TonemapMethod < 4.5) {
 			Color = FrostbyteTonemap(Color, IN.UITM);
-		} else {
+		} else if (SGS_TonemapMethod < 5.5) {
 			// 0.6 input pre-scale is the documented standard for this exact fit
 			// (not IN.UITM.ExposureBias, which is Uncharted2-specific) - widely
 			// reproduced alongside the fit itself, e.g.
 			// https://64.github.io/tonemapping/#aces-filmic-tone-mapping-curve.
 			Color = ACESFilm(Color * 0.6);
+		} else {
+			Color = AgXTonemap(Color);
 		}
 
 		//----------------------------------- Channel Crosstalk -----------------------------------//

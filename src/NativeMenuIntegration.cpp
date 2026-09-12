@@ -456,6 +456,17 @@ namespace NativeMenuIntegration
             std::snprintf(a_buffer, a_bufferSize, "%.2f", static_cast<double>(a_value));
         }
 
+        float __stdcall GetTonemapExposureOffset()
+        {
+            return (ActiveSettings()->postProcessing.tonemapExposureOffset + 2.0f) / 4.0f;
+        }
+        void __stdcall SetTonemapExposureOffset(float a_value)
+        {
+            EditableSettings().postProcessing.tonemapExposureOffset = a_value * 4.0f - 2.0f;
+            PublishSettings();
+            RequestSaveSettings();
+        }
+
         float __stdcall GetExposure() { return (ActiveSettings()->postProcessing.exposure + 2.0f) / 4.0f; }
         void  __stdcall SetExposure(float a_value)
         {
@@ -621,8 +632,11 @@ namespace NativeMenuIntegration
                 &SetPostProcessingEnabled, 1.0f, {}, nullptr, nullptr,
                 "$SGS_EFFECTS_ENABLED_DESC", &OnSettingCommit);
             AddVanillaSetting("$SGS_EFFECTS_TAB", Type::kDropdown, "$SGS_TONEMAP_CURVE", &GetTonemapMethod, &SetTonemapMethod,
-                3.0f, { "$SGS_CHANNEL", "$SGS_PEAK", "$SGS_AVERAGE_LUMA", "$SGS_FROSTBYTE", "$SGS_ACES" }, &IsGradingEnabled, nullptr,
-                "$SGS_TONEMAP_CURVE_DESC", &OnSettingCommit);
+                3.0f, { "$SGS_CHANNEL", "$SGS_PEAK", "$SGS_AVERAGE_LUMA", "$SGS_FROSTBYTE", "$SGS_ACES", "$SGS_AGX" },
+                &IsGradingEnabled, nullptr, "$SGS_TONEMAP_CURVE_DESC", &OnSettingCommit);
+            AddVanillaSetting("$SGS_EFFECTS_TAB", Type::kSlider, "$SGS_TONEMAP_EXPOSURE_OFFSET",
+                &GetTonemapExposureOffset, &SetTonemapExposureOffset, 0.5f, {}, &IsGradingEnabled, &FormatDecimal2,
+                "$SGS_TONEMAP_EXPOSURE_OFFSET_DESC", &OnSettingCommit);
             AddVanillaSetting("$SGS_EFFECTS_TAB", Type::kSlider, "$SGS_EXPOSURE", &GetExposure, &SetExposure, 0.5f, {},
                 &IsGradingEnabled, &FormatDecimal2, "$SGS_EXPOSURE_DESC", &OnSettingCommit);
             AddVanillaSetting("$SGS_EFFECTS_TAB", Type::kSlider, "$SGS_CONTRAST", &GetContrast, &SetContrast,

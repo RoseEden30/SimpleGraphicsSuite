@@ -70,6 +70,8 @@ namespace
             static_cast<float>(ini.GetDoubleValue("PostProcessing", "BloomIntensity", section.bloomIntensity));
         section.tonemapMethod =
             static_cast<std::uint32_t>(ini.GetLongValue("PostProcessing", "TonemapMethod", section.tonemapMethod));
+        section.tonemapExposureOffset = static_cast<float>(
+            ini.GetDoubleValue("PostProcessing", "TonemapExposureOffset", section.tonemapExposureOffset));
         section.motionBlurStrength =
             static_cast<float>(ini.GetDoubleValue("PostProcessing", "MotionBlurStrength", section.motionBlurStrength));
         section.vignette = static_cast<float>(ini.GetDoubleValue("PostProcessing", "Vignette", section.vignette));
@@ -95,6 +97,7 @@ namespace
         ini.SetDoubleValue("PostProcessing", "Saturation", section.saturation);
         ini.SetDoubleValue("PostProcessing", "BloomIntensity", section.bloomIntensity);
         ini.SetLongValue("PostProcessing", "TonemapMethod", static_cast<long>(section.tonemapMethod));
+        ini.SetDoubleValue("PostProcessing", "TonemapExposureOffset", section.tonemapExposureOffset);
         ini.SetDoubleValue("PostProcessing", "MotionBlurStrength", section.motionBlurStrength);
         ini.SetDoubleValue("PostProcessing", "Vignette", section.vignette);
         ini.SetBoolValue("PostProcessing", "VignetteSneakOnly", section.vignetteSneakOnly);
@@ -194,7 +197,8 @@ namespace
         pp.contrast = std::clamp(pp.contrast, 0.5f, 2.0f);
         pp.saturation = std::clamp(pp.saturation, 0.0f, 2.0f);
         pp.bloomIntensity = std::clamp(pp.bloomIntensity, 0.0f, 1.0f);
-        pp.tonemapMethod = std::clamp(pp.tonemapMethod, 1u, 5u);
+        pp.tonemapMethod = std::clamp(pp.tonemapMethod, 1u, 6u);
+        pp.tonemapExposureOffset = std::clamp(pp.tonemapExposureOffset, -2.0f, 2.0f);
         pp.motionBlurStrength = std::clamp(pp.motionBlurStrength, 0.0f, 1.0f);
         pp.vignette = std::clamp(pp.vignette, 0.0f, 1.0f);
         pp.filmGrain = std::clamp(pp.filmGrain, 0.0f, 1.0f);
