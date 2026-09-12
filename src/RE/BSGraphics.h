@@ -45,4 +45,7 @@ namespace RE::BSGraphics
             return instance.get();
         }
     };
+
+    inline float CameraNear() { return *REL::Relocation<float*>(RELOCATION_ID(517032, 403540), 0x40); }
+    inline float CameraFar() { return *REL::Relocation<float*>(RELOCATION_ID(517032, 403540), 0x44); }
 }

@@ -391,6 +391,27 @@ float3 ApplyVignette(float3 color, float2 uv, float strength)
 	return lerp(color, color * vig, strength);
 }
 
+// Distant pixels desaturate and shift toward a cool haze tint - tuned by
+// eye, not physical.
+float3 ApplyDistanceHaze(float3 color, float rawDepth, float near, float far, float strength)
+{
+	if (strength <= 0.0)
+		return color;
+
+	float linearDist = (far * near) / (-rawDepth * (far - near) + far);
+	const float kHazeDistance = 8000.0;
+	float haze = (1.0 - exp(-linearDist / kHazeDistance)) * strength;
+
+	float luma = dot(color, K_LUM);
+	float3 desaturated = lerp(color, luma.xxx, haze);
+
+	// Haze scatters ambient light - it can't brighten a pixel with none
+	// to begin with (night, shadow, a fade to black).
+	const float3 kHazeColor = float3(0.65, 0.72, 0.82);
+	float tintAmount = haze * 0.6 * saturate(luma * 4.0);
+	return lerp(desaturated, kHazeColor, tintAmount);
+}
+
 float3 ApplyFilmGrain(float3 color, float2 uv, float time, float strength)
 {
 	float noise = rand21(uv + time) - 0.5;
@@ -628,6 +649,10 @@ PS_OUTPUT main(PS_INPUT input)
 	}
 
 	Color = SGS_ApplyLUT(LUTTexture, LUTSampler, Color, SGS_LUTStrength, SGS_LUTSize);
+	if (SGS_DistanceHaze > 0.0) {
+		float depth = TextureDepth.Sample(TextureColorSampler, scaledUV).x;
+		Color = ApplyDistanceHaze(Color, depth, SGS_CameraNear, SGS_CameraFar, SGS_DistanceHaze);
+	}
 	Color = ApplyLensFlare(Color, input.TexCoord.xy, IN.GreyAdapt, SGS_LensFlare);
 	Color = ApplyVignette(Color, input.TexCoord.xy, SGS_Vignette);
 	Color = ApplyFilmGrain(Color, input.TexCoord.xy, SGS_GrainTime, SGS_FilmGrain);

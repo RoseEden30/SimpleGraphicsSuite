@@ -34,13 +34,6 @@ namespace DLSS
             return true;
         }
 
-        // Near/far plane and vertical FOV, verified against Community
-        // Shaders' own Utils/Game.cpp (same relocation, same +0x40/+0x44
-        // byte offsets, same horizontal-to-vertical FOV conversion).
-        // Streamline flags these as invalid if left unset.
-        float CameraNear() { return *REL::Relocation<float*>(RELOCATION_ID(517032, 403540), 0x40); }
-        float CameraFar() { return *REL::Relocation<float*>(RELOCATION_ID(517032, 403540), 0x44); }
-
         float VerticalFOVRad(std::uint32_t a_width, std::uint32_t a_height)
         {
             static REL::Relocation<float*> fovDeg{ RELOCATION_ID(513786, 388785) };
@@ -452,8 +445,8 @@ namespace DLSS
         constants.depthInverted = sl::Boolean::eFalse;
         constants.orthographicProjection = sl::Boolean::eFalse;
         constants.cameraFOV = VerticalFOVRad(outWidth, outHeight);
-        constants.cameraNear = CameraNear();
-        constants.cameraFar = CameraFar();
+        constants.cameraNear = RE::BSGraphics::CameraNear();
+        constants.cameraFar = RE::BSGraphics::CameraFar();
 
         const auto viewInverse = frame.cameraViewInverse.Transpose();
         constants.cameraRight = { viewInverse._11, viewInverse._12, viewInverse._13 };
@@ -512,7 +505,8 @@ namespace DLSS
 
         const auto encoded = EncodeUpscalingTextures(context, reinterpret_cast<ID3D11ShaderResourceView*>(motionVector.SRV),
             reinterpret_cast<ID3D11ShaderResourceView*>(depth.depthSRV), reinterpret_cast<ID3D11ShaderResourceView*>(taaMask.SRV),
-            reinterpret_cast<ID3D11ShaderResourceView*>(underwaterMask.SRV), CameraNear(), CameraFar(), g_renderWidth, g_renderHeight);
+            reinterpret_cast<ID3D11ShaderResourceView*>(underwaterMask.SRV), RE::BSGraphics::CameraNear(),
+            RE::BSGraphics::CameraFar(), g_renderWidth, g_renderHeight);
 
         sl::Resource colorInRes{ sl::ResourceType::eTex2d, a_colorResource, 0 };
         sl::Resource colorOutRes{ sl::ResourceType::eTex2d, g_outputTexture, 0 };

@@ -22,7 +22,11 @@ cbuffer SimpleGraphicsSuiteSettings : register(b13)
 	float SGS_FilmGrain;       // 0.0-1.0, 0=off
 	float SGS_GrainTime;       // seconds, wraps
 	float SGS_LensFlare;       // 0.0-1.0, 0=off
-	float SGS_Reserved4;
+	float SGS_DistanceHaze;  // 0.0-1.0, 0=off
+	float SGS_CameraNear;
+	float SGS_CameraFar;
+	float SGS_Reserved5;
+	float SGS_Reserved6;
 };
 
 #define SHARPENING_AMOUNT SGS_Sharpening

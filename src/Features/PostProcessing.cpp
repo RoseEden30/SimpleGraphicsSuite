@@ -7,6 +7,7 @@
 #include "Features/DLSS.h"
 #include "Features/LUT.h"
 #include "Features/Upscaling.h"
+#include "RE/BSGraphics.h"
 
 #include <algorithm>
 #include <array>
@@ -46,9 +47,13 @@ namespace PostProcessing
             float filmGrain;
             float grainTime;
             float lensFlare;
-            float reserved4;
+            float distanceHaze;
+            float cameraNear;
+            float cameraFar;
+            float reserved5;  // CreateBuffer needs a multiple of 16 bytes
+            float reserved6;
         };
-        static_assert(sizeof(SettingsCB) == 64);
+        static_assert(sizeof(SettingsCB) == 80);
 
         bool NeedsReplacedShader(const Settings& a_settings);  // defined near ApplyEnabled below
 
@@ -163,6 +168,9 @@ namespace PostProcessing
             dst->filmGrain = postProcessing.filmGrain;
             dst->grainTime = GrainTime();
             dst->lensFlare = postProcessing.lensFlare;
+            dst->distanceHaze = postProcessing.distanceHaze;
+            dst->cameraNear = RE::BSGraphics::CameraNear();
+            dst->cameraFar = RE::BSGraphics::CameraFar();
 
             context->Unmap(static_cast<REX::W32::ID3D11Resource*>(g_settingsBuffer), 0);
         }

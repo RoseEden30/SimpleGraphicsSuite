@@ -49,6 +49,14 @@ namespace NativeMenuIntegration
             RequestSaveSettings();
         }
 
+        float __stdcall GetDistanceHaze() { return ActiveSettings()->postProcessing.distanceHaze; }
+        void  __stdcall SetDistanceHaze(float a_value)
+        {
+            EditableSettings().postProcessing.distanceHaze = a_value;
+            PublishSettings();
+            RequestSaveSettings();
+        }
+
         float __stdcall GetSharpening() { return ActiveSettings()->postProcessing.sharpening; }
         void  __stdcall SetSharpening(float a_value)
         {
@@ -620,6 +628,8 @@ namespace NativeMenuIntegration
                 0.0f, {}, nullptr, nullptr, "$SGS_FILM_GRAIN_DESC", &OnSettingCommit);
             AddVanillaSetting("$SGS_EFFECTS_TAB", Type::kSlider, "$SGS_LENS_FLARE", &GetLensFlare, &SetLensFlare,
                 0.0f, {}, nullptr, nullptr, "$SGS_LENS_FLARE_DESC", &OnSettingCommit);
+            AddVanillaSetting("$SGS_EFFECTS_TAB", Type::kSlider, "$SGS_DISTANCE_HAZE", &GetDistanceHaze,
+                &SetDistanceHaze, 0.0f, {}, nullptr, nullptr, "$SGS_DISTANCE_HAZE_DESC", &OnSettingCommit);
 
             // Same static-option-list constraint as every other dropdown -
             // picking up files dropped in after this scan needs a restart.
