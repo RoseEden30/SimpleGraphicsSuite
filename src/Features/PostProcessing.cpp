@@ -56,8 +56,12 @@ namespace PostProcessing
             float lightDirX;
             float lightDirY;
             float lightDirZ;
+            float loadingScreen;
+            float pad0;
+            float pad1;
+            float pad2;
         };
-        static_assert(sizeof(SettingsCB) == 96);
+        static_assert(sizeof(SettingsCB) == 112);
 
         // Matches SGS_CSLightData (Buffer<float4> at t10) in ContactShadows.hlsli.
         constexpr std::size_t kMaxContactLights = 4;
@@ -97,6 +101,8 @@ namespace PostProcessing
         // Set from Hook_SetupTechnique, read by UpdateSettingsBuffer - see
         // the motion blur SRV binding below.
         bool g_motionBlurSuppressedByMenu = false;
+        // Same diff pattern, for the loading screen.
+        bool g_loadingScreenApplied = false;
 
         // Cached once per frame from OnPrePresent - avoids repeated
         // IsMenuOpen queries on every SetupTechnique call.
@@ -219,6 +225,7 @@ namespace PostProcessing
             dst->lightDirX = sunDir.x;
             dst->lightDirY = sunDir.y;
             dst->lightDirZ = sunDir.z;
+            dst->loadingScreen = g_loadingMenuOpen ? 1.0f : 0.0f;
 
             context->Unmap(static_cast<REX::W32::ID3D11Resource*>(g_settingsBuffer), 0);
         }
@@ -276,8 +283,7 @@ namespace PostProcessing
             }
         }
 
-        // Dynamic buffer read as Buffer<float4> at t10, since b13 is the last
-        // constant-buffer slot the API allows and it is already taken.
+        // Read as Buffer<float4> at t10 - b13 is the last constant-buffer slot.
         void EnsureContactLightsBuffer()
         {
             if (g_contactLightsBuffer)
@@ -470,6 +476,11 @@ namespace PostProcessing
                 // load locks, and this runs per technique setup.
                 const auto  settingsPtr = ActiveSettings();
                 const auto& settings = *settingsPtr;
+
+                if (g_loadingMenuOpen != g_loadingScreenApplied) {
+                    g_loadingScreenApplied = g_loadingMenuOpen;
+                    UpdateSettingsBuffer(settings);
+                }
 
                 if (auto* lutSRV = reinterpret_cast<REX::W32::ID3D11ShaderResourceView*>(LUT::CurrentSRV())) {
                     auto* lutSampler = reinterpret_cast<REX::W32::ID3D11SamplerState*>(LUT::Sampler());

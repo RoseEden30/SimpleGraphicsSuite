@@ -572,6 +572,16 @@ PS_OUTPUT main(PS_INPUT input)
 	} else {
 		Color = TextureColor.Sample(TextureColorSampler, scaledUV.xy);
 	}
+
+	// Loading screens go through this same shader; none of our effects
+	// should tint them, so skip straight to output.
+	if (SGS_LoadingScreen > 0.5) {
+		PS_OUTPUT loadingOut;
+		loadingOut.Color.rgb = Color;
+		loadingOut.Color.a = 1.0;
+		return loadingOut;
+	}
+
 	// Per-object motion blur, sourced from TextureColor. Runs before RCAS -
 	// its neighbor taps read TextureColor directly, so running it after
 	// RCAS diluted every pixel's sharpening with unsharpened samples.

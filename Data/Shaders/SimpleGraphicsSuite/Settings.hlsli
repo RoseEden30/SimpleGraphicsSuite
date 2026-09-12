@@ -31,6 +31,7 @@ cbuffer SimpleGraphicsSuiteSettings : register(b13)
 	float SGS_LightDirX;       // world-space direction toward the light
 	float SGS_LightDirY;
 	float SGS_LightDirZ;
+	float SGS_LoadingScreen;  // 1 while the loading menu is open, else 0
 };
 
 #define SHARPENING_AMOUNT SGS_Sharpening
