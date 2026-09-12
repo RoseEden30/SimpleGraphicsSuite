@@ -326,10 +326,10 @@ namespace PostProcessing
                     runtimeData.context->PSSetSamplers(8, 1, &lutSampler);
                 }
 
-                // Motion vector + depth for per-object motion blur, see
-                // MotionBlur.hlsli. Suppressed while a menu has the game
-                // paused: the map and the wait menu move the scene far more
-                // than gameplay does, which reads as smearing.
+                // Motion vector for per-object motion blur, see MotionBlur.hlsli.
+                // Suppressed while a menu has the game paused: the map and the
+                // wait menu move the scene far more than gameplay does, which
+                // reads as smearing.
                 {
                     if (g_pausedByMenu != g_motionBlurSuppressedByMenu) {
                         g_motionBlurSuppressedByMenu = g_pausedByMenu;
@@ -340,7 +340,10 @@ namespace PostProcessing
                         auto* motionSRV = reinterpret_cast<REX::W32::ID3D11ShaderResourceView*>(
                             runtimeData.renderTargets[RE::RENDER_TARGETS::kMOTION_VECTOR].SRV);
                         runtimeData.context->PSSetShaderResources(7, 1, &motionSRV);
+                    }
 
+                    if (settings.masterEnabled &&
+                        (settings.postProcessing.motionBlurStrength > 0.0f || settings.postProcessing.distanceHaze > 0.0f)) {
                         auto& depthStencils = RE::BSGraphics::Renderer::GetSingleton()->GetDepthStencilData();
                         auto* depthSRV = reinterpret_cast<REX::W32::ID3D11ShaderResourceView*>(
                             depthStencils.depthStencils[RE::RENDER_TARGET_DEPTHSTENCIL::kMAIN].depthSRV);

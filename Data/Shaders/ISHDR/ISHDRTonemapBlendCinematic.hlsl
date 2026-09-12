@@ -428,7 +428,7 @@ float3 ApplyHighlightGlow(float3 color, float2 uv, float strength)
 
 // Distant pixels desaturate and shift toward a cool haze tint - tuned by
 // eye, not physical.
-float3 ApplyDistanceHaze(float3 color, float rawDepth, float near, float far, float strength)
+float3 ApplyDistanceHaze(float3 color, float2 uv, float rawDepth, float near, float far, float strength)
 {
 	if (strength <= 0.0 || !isfinite(near) || !isfinite(far) || near <= 0.0 || far <= near)
 		return color;
@@ -437,13 +437,14 @@ float3 ApplyDistanceHaze(float3 color, float rawDepth, float near, float far, fl
 	const float kHazeDistance = 8000.0;
 	float haze = (1.0 - exp(-linearDist / kHazeDistance)) * strength;
 
-	float luma = dot(color, K_LUM);
-	float3 desaturated = lerp(color, luma.xxx, haze);
+	float sceneLuma = dot(TextureColor.Sample(TextureColorSampler, uv).rgb, K_LUM);
+
+	float3 desaturated = lerp(color, dot(color, K_LUM).xxx, haze);
 
 	// Haze scatters ambient light - it can't brighten a pixel with none
 	// to begin with (night, shadow, a fade to black).
 	const float3 kHazeColor = float3(0.65, 0.72, 0.82);
-	float tintAmount = haze * 0.6 * saturate(luma * 4.0);
+	float tintAmount = haze * 0.6 * saturate(sceneLuma * 4.0);
 	return lerp(desaturated, kHazeColor, tintAmount);
 }
 
@@ -690,7 +691,7 @@ PS_OUTPUT main(PS_INPUT input)
 	Color = SGS_ApplyLUT(LUTTexture, LUTSampler, Color, SGS_LUTStrength, SGS_LUTSize);
 	if (SGS_DistanceHaze > 0.0) {
 		float depth = TextureDepth.Sample(TextureColorSampler, scaledUV).x;
-		Color = ApplyDistanceHaze(Color, depth, SGS_CameraNear, SGS_CameraFar, SGS_DistanceHaze);
+		Color = ApplyDistanceHaze(Color, scaledUV, depth, SGS_CameraNear, SGS_CameraFar, SGS_DistanceHaze);
 	}
 	Color = ApplyHighlightGlow(Color, scaledUV, SGS_HighlightGlow);
 	Color = ApplyLensFlare(Color, input.TexCoord.xy, IN.GreyAdapt, SGS_LensFlare);
