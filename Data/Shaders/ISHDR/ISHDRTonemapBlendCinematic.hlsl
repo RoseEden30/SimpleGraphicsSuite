@@ -395,7 +395,7 @@ float3 ApplyVignette(float3 color, float2 uv, float strength)
 // eye, not physical.
 float3 ApplyDistanceHaze(float3 color, float rawDepth, float near, float far, float strength)
 {
-	if (strength <= 0.0)
+	if (strength <= 0.0 || !isfinite(near) || !isfinite(far) || near <= 0.0 || far <= near)
 		return color;
 
 	float linearDist = (far * near) / (-rawDepth * (far - near) + far);
