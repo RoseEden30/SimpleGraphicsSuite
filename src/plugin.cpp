@@ -21,17 +21,6 @@ namespace
         UpdateSettingsSave();
     }
 
-    void InstallSettingsSaveTick()
-    {
-        if (!PresentHook::Install()) {
-            logger::warn("Couldn't install the Present hook - settings will be written on every change");
-            return;
-        }
-
-        PresentHook::RegisterPrePresent(OnPrePresent);
-        EnableSaveDebounce();
-    }
-
     void OnMessage(SKSE::MessagingInterface::Message* message)
     {
         switch (message->type) {
@@ -64,8 +53,14 @@ namespace
             // Its only reader is DLSS, and support is fixed for the session.
             if (DLSS::IsSupported())
                 FrameBufferCache::InstallHooks();
-            // Before the menu registers, so its first change is debounced.
-            InstallSettingsSaveTick();
+
+            // Last, once every module above has registered its callback.
+            PresentHook::RegisterPrePresent(OnPrePresent);
+            if (PresentHook::Install())
+                EnableSaveDebounce();
+            else
+                logger::warn("Couldn't install the Present hook - Reflex and the accessibility filters are off");
+
             NativeMenuIntegration::Register();
             break;
 

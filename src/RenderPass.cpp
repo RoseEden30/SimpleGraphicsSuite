@@ -6,9 +6,6 @@ namespace RenderPass
 {
     namespace
     {
-        // Generates a full-screen triangle from SV_VertexID alone - no vertex
-        // or index buffer needed. Standard trick: 3 vertices whose clip-space
-        // positions overshoot the viewport so the triangle still covers it.
         constexpr const char* kFullScreenTriangleVS = R"(
             void main(uint id : SV_VertexID, out float4 pos : SV_Position, out float2 uv : TEXCOORD0)
             {
@@ -105,9 +102,19 @@ namespace RenderPass
 
         context->OMSetRenderTargets(1, &a_rtv, nullptr);
 
+        // Whatever the engine left bound would otherwise blend, scissor or
+        // depth-test this pass, and any live GS/HS/DS would run on it.
+        context->OMSetBlendState(nullptr, nullptr, 0xffffffff);
+        context->OMSetDepthStencilState(nullptr, 0);
+        context->RSSetState(nullptr);
+        context->GSSetShader(nullptr, nullptr, 0);
+        context->HSSetShader(nullptr, nullptr, 0);
+        context->DSSetShader(nullptr, nullptr, 0);
+
+        context->IASetInputLayout(nullptr);
+        context->IASetPrimitiveTopology(REX::W32::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         context->VSSetShader(vs, nullptr, 0);
         context->PSSetShader(a_pixelShader, nullptr, 0);
-        context->IASetPrimitiveTopology(REX::W32::D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
         if (a_srvs.size() > 0)
             context->PSSetShaderResources(0, static_cast<std::uint32_t>(a_srvs.size()), a_srvs.begin());

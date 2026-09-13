@@ -3,7 +3,7 @@
 
 cmake_minimum_required(VERSION 3.21)
 
-project(SimpleGraphicsSuite VERSION 1.1.0 LANGUAGES CXX)
+project(SimpleGraphicsSuite VERSION 1.1.1 LANGUAGES CXX)
 
 set(PLUGIN_AUTHOR "RoseEden" CACHE STRING "Author name baked into the plugin declaration")
 
@@ -29,7 +29,7 @@ set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
 # needs a hand-built Xbyak stub like doodlum's SSEShaderTools uses.
 set(SKSE_SUPPORT_XBYAK ON CACHE BOOL "" FORCE)
 
-# CommonLibSSE-NG is a git submodule pinned under extern/.
+# CommonLibSSE-NG is cloned under extern/, see the README.
 set(
     COMMONLIBSSE_DIR
     "${CMAKE_CURRENT_SOURCE_DIR}/extern/CommonLibSSE-NG"

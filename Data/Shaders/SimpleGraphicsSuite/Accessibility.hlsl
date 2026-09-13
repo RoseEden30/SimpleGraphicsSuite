@@ -16,7 +16,7 @@ cbuffer AccessibilitySettings : register(b0)
 // the resulting error (what that simulation drops) into the blue/red
 // channels the deficiency doesn't affect, so hues that were confusable stay
 // distinguishable. Simulation matrices are the standard simplified RGB set
-// (Machado/Oliveira/Fialho 2009, as commonly reproduced); the error-shift
+// (Machado/Oliveira/Fernandes 2009, as commonly reproduced); the error-shift
 // matrix is the standard Daltonize correction (Fidaner/Lin/Ozguven 2005).
 float3 Daltonize(float3 color, float mode, float strength)
 {

@@ -4,8 +4,6 @@
 // shader, bind inputs, draw. Used by the Accessibility filter.
 namespace RenderPass
 {
-    // Same D3DCompileFromFile/CreatePixelShader pattern PostProcessing uses,
-    // shared here so every pass module doesn't reimplement it.
     REX::W32::ID3D11PixelShader* CompilePixelShader(
         const std::filesystem::path& a_path, const D3D_SHADER_MACRO* a_macros = nullptr);
 

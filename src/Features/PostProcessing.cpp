@@ -2,6 +2,7 @@
 
 #include "Config.h"
 #include "PresentHook.h"
+#include "RenderPass.h"
 #include "VTablePatch.h"
 
 #include "Features/DLSS.h"
@@ -14,7 +15,6 @@
 #include <chrono>
 #include <cmath>
 #include <d3d11.h>
-#include <d3dcompiler.h>
 #include <string_view>
 #include <unordered_map>
 
@@ -98,10 +98,7 @@ namespace PostProcessing
             return { -worldDir.x, -worldDir.y, -worldDir.z };
         }
 
-        // Set from Hook_SetupTechnique, read by UpdateSettingsBuffer - see
-        // the motion blur SRV binding below.
         bool g_motionBlurSuppressedByMenu = false;
-        // Same diff pattern, for the loading screen.
         bool g_loadingScreenApplied = false;
 
         // Cached once per frame from OnPrePresent - avoids repeated
@@ -283,7 +280,6 @@ namespace PostProcessing
             }
         }
 
-        // Read as Buffer<float4> at t10 - b13 is the last constant-buffer slot.
         void EnsureContactLightsBuffer()
         {
             if (g_contactLightsBuffer)
@@ -336,8 +332,6 @@ namespace PostProcessing
 
         REX::W32::ID3D11PixelShader* CompilePixelShader(const std::filesystem::path& a_path)
         {
-            auto* device = RE::BSGraphics::Renderer::GetSingleton()->GetRuntimeData().forwarder;
-
             const auto screenSize = RE::BSGraphics::Renderer::GetScreenSize();
             const auto invWidthStr = std::format("{}", 1.0f / static_cast<float>(screenSize.width));
             const auto invHeightStr = std::format("{}", 1.0f / static_cast<float>(screenSize.height));
@@ -353,34 +347,7 @@ namespace PostProcessing
             if (REL::Module::IsVR())
                 macros[4] = { "VR", "" };
 
-            ID3DBlob* shaderBlob = nullptr;
-            ID3DBlob* errors = nullptr;
-
-            const auto compiled = D3DCompileFromFile(a_path.c_str(), macros, D3D_COMPILE_STANDARD_FILE_INCLUDE,
-                "main", "ps_5_0", D3DCOMPILE_OPTIMIZATION_LEVEL3, 0, &shaderBlob, &errors);
-
-            if (FAILED(compiled)) {
-                logger::warn("Shader compile failed for {}: {}", a_path.string(),
-                    errors ? static_cast<const char*>(errors->GetBufferPointer()) : "unknown error");
-                if (errors)
-                    errors->Release();
-                if (shaderBlob)
-                    shaderBlob->Release();
-                return nullptr;
-            }
-            if (errors)
-                errors->Release();
-
-            REX::W32::ID3D11PixelShader* shader = nullptr;
-            const auto created =
-                device->CreatePixelShader(shaderBlob->GetBufferPointer(), shaderBlob->GetBufferSize(), nullptr, &shader);
-            shaderBlob->Release();
-
-            if (FAILED(created)) {
-                logger::warn("Pixel shader creation failed for {}", a_path.string());
-                return nullptr;
-            }
-            return shader;
+            return RenderPass::CompilePixelShader(a_path, macros);
         }
 
         // Files are named <technique ID in hex>.ps.hlsl, the layout doodlum
@@ -538,9 +505,6 @@ namespace PostProcessing
             return result;
         }
 
-        // BSShader::SetupTechnique is virtual - shaders sharing the same
-        // underlying C++ class share one vtable, so this only needs patching
-        // once per distinct class, not once per technique file.
         void PatchSetupTechnique(RE::BSShader& a_shader)
         {
             auto* vtable = *reinterpret_cast<void**>(&a_shader);
@@ -643,12 +607,11 @@ namespace PostProcessing
                 return false;
 
             const auto& pp = a_settings.postProcessing;
-            return pp.enabled || pp.motionBlurStrength > 0.0f || pp.vignette > 0.0f || pp.sharpening > 0.0f ||
-                pp.contactShadows || !pp.lutName.empty() ||
-                a_settings.upscaling.enabled;
+            return pp.enabled || pp.sharpening > 0.0f || pp.motionBlurStrength > 0.0f || pp.vignette > 0.0f ||
+                pp.filmGrain > 0.0f || pp.lensFlare > 0.0f || pp.distanceHaze > 0.0f || pp.highlightGlow > 0.0f ||
+                pp.contactShadows || !pp.lutName.empty() || a_settings.upscaling.enabled;
         }
 
-        // -1 until the first apply, so that one always goes through.
         int g_loggedEnabled = -1;
 
         void ApplyEnabled(bool a_enabled)
@@ -725,7 +688,6 @@ namespace PostProcessing
         logger::info("Post-processing shader hook installed");
 
         RegisterPublishCallback(&Reapply);
-        if (PresentHook::Install())
-            PresentHook::RegisterPrePresent(&OnPrePresent);
+        PresentHook::RegisterPrePresent(&OnPrePresent);
     }
 }

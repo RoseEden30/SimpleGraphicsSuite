@@ -18,14 +18,13 @@ namespace SoftShadows
         constexpr float kSoftnessMax = 20.0f;
         constexpr float kSoftnessInterior = 8.0f;
 
-        float& RadiusScaleSetting()
+        float* RadiusScaleSetting()
         {
             auto* ini = RE::INISettingCollection::GetSingleton();
-            return ini->GetSetting("fPoissonRadiusScale:Display")->data.f;
+            auto* setting = ini ? ini->GetSetting("fPoissonRadiusScale:Display") : nullptr;
+            return setting ? &setting->data.f : nullptr;
         }
 
-        // Backed up once so disabling restores the player's own ini value,
-        // not an assumed default.
         bool  g_backedUp = false;
         float g_original = 1.0f;
 
@@ -40,25 +39,28 @@ namespace SoftShadows
             if (cell->IsInteriorCell() || !sky->currentWeather || !sky->mode.any(RE::Sky::Mode::kFull))
                 return kSoftnessInterior;
 
+            auto* shadowSceneNode = RE::BSShaderManager::State::GetSingleton().shadowSceneNode[0];
+            auto* sunShadowLight = shadowSceneNode ? shadowSceneNode->GetRuntimeData().sunLight : nullptr;
+            auto* sunLight = sunShadowLight ? skyrim_cast<RE::NiDirectionalLight*>(sunShadowLight->light.get())
+                                            : nullptr;
+            auto* isManager = RE::ImageSpaceManager::GetSingleton();
+            auto* sunRoot = sky->sun ? sky->sun->GetRoot() : nullptr;
+            if (!sunLight || !isManager || !sunRoot)
+                return kSoftnessInterior;
+
             float ambientSum = 0.0f;
             for (auto& column : sky->directionalAmbientColors)
                 for (auto& color : column)
                     ambientSum += Luma(color);
             const float ambient = ambientSum / 6.0f;
 
-            auto& shaderState = RE::BSShaderManager::State::GetSingleton();
-            auto* sunLight = skyrim_cast<RE::NiDirectionalLight*>(
-                shaderState.shadowSceneNode[0]->GetRuntimeData().sunLight->light.get());
-            if (!sunLight)
-                return kSoftnessInterior;
-
-            auto&       isData = RE::ImageSpaceManager::GetSingleton()->GetImageSpaceData();
+            auto&       isData = isManager->GetImageSpaceData();
             const float sunlightScale =
                 REL::Module::IsVR() ? isData.baseData.cinematic.brightness : isData.baseData.hdr.sunlightScale;
             const float sunlight =
                 Luma(sunLight->GetLightRuntimeData().diffuse) * sunLight->GetLightRuntimeData().fade * sunlightScale;
 
-            float sunAngle = sky->sun->GetRoot()->local.translate.z / 200.0f;
+            float sunAngle = sunRoot->local.translate.z / 200.0f;
             sunAngle = 1.0f - std::clamp(sunAngle, 0.0f, 1.0f);
 
             float softness = 1.0f + (ambient / std::max(sunlight, 1e-4f)) + sunAngle;
@@ -68,9 +70,12 @@ namespace SoftShadows
 
         void Update()
         {
-            auto& setting = RadiusScaleSetting();
+            auto* setting = RadiusScaleSetting();
+            if (!setting)
+                return;
+
             if (!g_backedUp) {
-                g_original = setting;
+                g_original = *setting;
                 g_backedUp = true;
             }
 
@@ -79,8 +84,8 @@ namespace SoftShadows
                                       ? kRadiusScaleBase * ComputeSoftness()
                                       : g_original;
 
-            if (setting != target)
-                setting = target;
+            if (*setting != target)
+                *setting = target;
         }
 
         using Update_t = void (*)(RE::PlayerCharacter*, float);

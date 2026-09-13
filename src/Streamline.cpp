@@ -12,7 +12,6 @@ namespace Streamline
         HMODULE    g_interposer = nullptr;
 
         PFun_slInit*                  s_slInit = nullptr;
-        PFun_slShutdown*              s_slShutdown = nullptr;
         PFun_slIsFeatureSupported*    s_slIsFeatureSupported = nullptr;
         PFun_slSetD3DDevice*          s_slSetD3DDevice = nullptr;
         PFun_slGetNewFrameToken*      s_slGetNewFrameToken = nullptr;
@@ -24,7 +23,6 @@ namespace Streamline
 
         PFun_slDLSSSetOptions*         s_slDLSSSetOptions = nullptr;
 
-        // Same layout Community Shaders uses for these binaries.
         std::filesystem::path PluginDir()
         {
             const auto* plugin = SKSE::PluginDeclaration::GetSingleton();
@@ -62,7 +60,6 @@ namespace Streamline
         }
 
         s_slInit = reinterpret_cast<PFun_slInit*>(GetProcAddress(g_interposer, "slInit"));
-        s_slShutdown = reinterpret_cast<PFun_slShutdown*>(GetProcAddress(g_interposer, "slShutdown"));
         s_slIsFeatureSupported =
             reinterpret_cast<PFun_slIsFeatureSupported*>(GetProcAddress(g_interposer, "slIsFeatureSupported"));
         s_slSetD3DDevice = reinterpret_cast<PFun_slSetD3DDevice*>(GetProcAddress(g_interposer, "slSetD3DDevice"));
@@ -77,8 +74,9 @@ namespace Streamline
         s_slUpgradeInterface =
             reinterpret_cast<PFun_slUpgradeInterface*>(GetProcAddress(g_interposer, "slUpgradeInterface"));
 
-        if (!s_slInit || !s_slSetD3DDevice || !s_slGetNewFrameToken || !s_slSetConstants || !s_slSetTag ||
-            !s_slEvaluateFeature || !s_slGetFeatureFunction || !s_slUpgradeInterface) {
+        if (!s_slInit || !s_slIsFeatureSupported || !s_slSetD3DDevice || !s_slGetNewFrameToken ||
+            !s_slSetConstants || !s_slSetTag || !s_slEvaluateFeature || !s_slGetFeatureFunction ||
+            !s_slUpgradeInterface) {
             logger::warn("Streamline: interposer loaded but missing expected exports");
             return;
         }

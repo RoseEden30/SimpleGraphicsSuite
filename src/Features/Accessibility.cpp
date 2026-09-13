@@ -116,8 +116,6 @@ namespace Accessibility
             return true;
         }
 
-        // Runs right before every Present - has to stay cheap on the common
-        // case (filter off), since that's every frame for most players.
         void OnPrePresent(
             REX::W32::ID3D11Device* a_device, REX::W32::ID3D11DeviceContext* a_context, REX::W32::IDXGISwapChain* a_swapChain)
         {
@@ -172,13 +170,5 @@ namespace Accessibility
         }
     }
 
-    void InstallHooks()
-    {
-        if (!PresentHook::Install()) {
-            logger::error("Accessibility: couldn't install the Present hook - filters disabled");
-            return;
-        }
-        PresentHook::RegisterPrePresent(OnPrePresent);
-        logger::info("Accessibility hooks installed");
-    }
+    void InstallHooks() { PresentHook::RegisterPrePresent(OnPrePresent); }
 }

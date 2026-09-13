@@ -18,8 +18,6 @@ namespace Reflex
 
         REX::W32::ID3D11Device* g_device = nullptr;
 
-        // Read from the per-frame marker hooks, written from the publish
-        // callback - so nothing NvAPI-related runs while Reflex is off.
         std::atomic<bool> g_active{ false };
 
         // What was last handed to the driver, to skip identical calls during
@@ -108,7 +106,6 @@ namespace Reflex
             static inline REL::Relocation<decltype(thunk)> func;
         };
 
-        // NVIDIA vendor ID, straight from the PCI-SIG database.
         constexpr std::uint32_t kNvidiaVendorId = 0x10DE;
 
         bool DetectNvidia(REX::W32::ID3D11Device* a_device)
@@ -155,11 +152,6 @@ namespace Reflex
             return;
         }
 
-        if (!PresentHook::Install()) {
-            logger::error("Reflex disabled");
-            g_supported = false;
-            return;
-        }
         PresentHook::RegisterPrePresent(OnPrePresent);
         PresentHook::RegisterPostPresent(OnPostPresent);
 

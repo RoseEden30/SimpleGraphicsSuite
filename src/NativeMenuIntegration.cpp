@@ -185,8 +185,7 @@ namespace NativeMenuIntegration
             RequestSaveSettings();
         }
 
-        // Off, then AMD's own FSR1 quality presets - matches the values
-        // Upscaling.cpp's own render scale slider is documented against.
+        // Off, then AMD's own FSR1 quality presets.
         constexpr float kUpscalePresets[] = { 1.0f, 0.77f, 0.67f, 0.58f, 0.50f };
 
         float __stdcall GetUpscalingPreset()
@@ -598,7 +597,7 @@ namespace NativeMenuIntegration
                 &OnSettingCommit);
         }
 
-        if (postProcessing) {
+        if (postProcessing && antiAliasing) {
             AddVanillaSetting("Display", Type::kDropdown, "$SGS_RENDER_RESOLUTION", &GetUpscalingPreset,
                 &SetUpscalingPreset, 0.0f,
                 { "$SGS_NATIVE_OFF", "$SGS_77_ULTRA_QUALITY", "$SGS_67_QUALITY", "$SGS_58_BALANCED", "$SGS_50_PERFORMANCE" },
@@ -668,7 +667,7 @@ namespace NativeMenuIntegration
             // Same static-option-list constraint as every other dropdown -
             // picking up files dropped in after this scan needs a restart.
             LUT::Rescan();
-            g_lutOptions.assign(1, "None");
+            g_lutOptions.assign(1, "$SGS_OFF");
             for (const auto& name : LUT::AvailableNames())
                 g_lutOptions.push_back(name);
             AddVanillaSetting("$SGS_LUT_TAB", Type::kDropdown, "$SGS_COLOR_GRADING_LUT", &GetLutIndex, &SetLutIndex, 0.0f,

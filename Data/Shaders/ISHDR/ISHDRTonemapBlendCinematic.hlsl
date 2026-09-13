@@ -474,6 +474,9 @@ float3 SampleBrightBlurred(float2 uv, float threshold)
 
 float3 ApplyLensFlare(float3 color, float2 uv, float greyAdapt, float strength)
 {
+	if (strength <= 0.0)
+		return color;
+
 	static const float  scales[4] = { -1.5, 2.5, -5.0, 0.7 };
 	static const float3 tints[4] = {
 		float3(1.0, 0.8, 0.4), float3(0.8, 1.0, 0.9), float3(0.6, 0.8, 1.0), float3(1.0, 0.6, 0.6)
@@ -594,11 +597,11 @@ PS_OUTPUT main(PS_INPUT input)
 			float4(Color, 1.0)).rgb;
 	}
 
-	// RCAS: AMD's refined companion to CAS - same job (local-contrast-adaptive
-	// sharpen) but backs off on detected noise instead of over-sharpening it.
-	// SGS_Sharpening is 0-1 (1=max); RCAS itself takes stops of backoff, 0=max.
-	Color = SGS_ApplyFSR1RCAS(TextureColor, TextureColorSampler, scaledUV, float2(SCREEN_INV_WIDTH, SCREEN_INV_HEIGHT),
-		Color, (1.0 - SGS_Sharpening) * 4.0);
+	// SGS_Sharpening is 0-1 (1=max); RCAS takes stops of backoff, 0=max.
+	if (SGS_Sharpening > 0.0) {
+		Color = SGS_ApplyFSR1RCAS(TextureColor, TextureColorSampler, scaledUV,
+			float2(SCREEN_INV_WIDTH, SCREEN_INV_HEIGHT), Color, (1.0 - SGS_Sharpening) * 4.0);
+	}
 
 #ifndef VR
 	if (SGS_ContactShadows > 0.0) {

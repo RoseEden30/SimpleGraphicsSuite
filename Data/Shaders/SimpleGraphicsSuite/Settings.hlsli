@@ -16,7 +16,7 @@ cbuffer SimpleGraphicsSuiteSettings : register(b13)
 	float SGS_UpscalingEnabled;
 	float SGS_LUTStrength;
 	float SGS_LUTSize;
-	float SGS_TonemapMethod;  // 1=channel, 2=peak, 3=average luma, 4=Frostbyte, 5=ACES
+	float SGS_TonemapMethod;  // 1=channel, 2=peak, 3=average luma, 4=Frostbyte, 5=ACES, 6=AgX
 	float SGS_Vignette;       // 0.0-1.0, 0=off
 	float SGS_PostProcessingEnabled;  // gates only the ENB grading, see main()'s Vanilla() fallback
 	float SGS_FilmGrain;       // 0.0-1.0, 0=off

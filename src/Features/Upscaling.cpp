@@ -17,9 +17,10 @@ namespace Upscaling
         if (!a_settings.masterEnabled || !a_settings.upscaling.enabled)
             return false;
 
-        // Dropping the ratio without the shader that reconstructs it would
-        // only leave the scene blurry.
-        if (Compatibility::IsSuppressed(Compatibility::kPostProcessing))
+        // AntiAliasing's hook drives the ratio, PostProcessing's shader
+        // reconstructs it - without either, the scene just ends up blurry.
+        if (Compatibility::IsSuppressed(Compatibility::kPostProcessing) ||
+            Compatibility::IsSuppressed(Compatibility::kAntiAliasing))
             return false;
 
         const auto& aa = a_settings.antiAliasing;

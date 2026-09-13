@@ -7,7 +7,7 @@ One DLL, one ini. The plugin runs on its own. If [NativeSystemMenuFramework](htt
 ## Modules
 
 - **Anti-aliasing** - TAA (with a mip LOD bias deblur), FXAA, or NVIDIA DLAA through Streamline. Mutually exclusive; picking one turns the others off.
-- **Post-processing** - doodlum's Vanilla HDR tonemap with five selectable curves, FidelityFX RCAS sharpening, exposure/contrast/saturation/bloom intensity, `.cube` LUT color grading, motion blur off the engine's own motion vector buffer, film grain, lens flare, and a vignette that can be limited to sneaking.
+- **Post-processing** - doodlum's Vanilla HDR tonemap with six selectable curves and an exposure offset, FidelityFX RCAS sharpening, exposure/contrast/saturation/bloom intensity, `.cube` LUT color grading, motion blur off the engine's own motion vector buffer, film grain, lens flare, distance haze, highlight glow, screen-space contact shadows, and a vignette that can be limited to sneaking.
 - **Render scale** - renders the 3D scene below native resolution through the engine's dynamic resolution, then reconstructs with FidelityFX FSR1 (EASU). Ignored under FXAA and DLAA, which both take the resolution back.
 - **Soft shadows** - scales the engine's own shadow softness with scene lighting: soft in dim/overcast light, sharp in direct sun, fixed indoors.
 - **Field of view** - overrides the game's own FOV live, left untouched until it's set.
@@ -34,7 +34,7 @@ cmake --build build/release
 The third-party SDKs under `extern/` are not stored in this repository. Fetch
 them before configuring:
 
-- `extern/CommonLibSSE-NG` - a git submodule, cloned separately (see below)
+- `extern/CommonLibSSE-NG` - cloned separately (see below)
 - `extern/nvapi` - the NVIDIA NVAPI SDK (`nvapi.h`, headers, `amd64/nvapi64.lib`)
 - `extern/Streamline` - an NVIDIA Streamline SDK release, keeping its `include/`
   and `bin/x64/` layout
