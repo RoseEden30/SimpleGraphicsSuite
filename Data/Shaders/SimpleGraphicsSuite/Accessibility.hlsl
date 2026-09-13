@@ -78,7 +78,7 @@ float3 HighContrast(float3 color, float2 uv, float strength)
 float4 main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target0
 {
 	float3 color = TextureColor.Sample(TextureColorSampler, uv).rgb;
-	color = Daltonize(color, SGS_ColorblindMode, SGS_ColorblindStrength);
 	color = HighContrast(color, uv, SGS_HighContrastStrength);
+	color = Daltonize(color, SGS_ColorblindMode, SGS_ColorblindStrength);
 	return float4(color, 1.0);
 }
