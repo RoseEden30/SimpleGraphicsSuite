@@ -458,21 +458,23 @@ float3 ApplyFilmGrain(float3 color, float2 uv, float time, float strength)
 
 // A soft, thresholded blob instead of a sharp point sample - otherwise a
 // ghost just reads as a small copy of the scene, not a light artifact.
-float3 SampleBrightBlurred(float2 uv, float threshold)
+float3 SampleBrightBlurred(float2 uv, float threshold, float2 uvScale, float2 uvClamp)
 {
 	static const float2 kOffsets[4] = { float2(1, 1), float2(-1, 1), float2(1, -1), float2(-1, -1) };
 	const float2        texel = float2(SCREEN_INV_WIDTH, SCREEN_INV_HEIGHT) * 8.0;
 
-	float3 sum = TextureColor.Sample(TextureColorSampler, uv).rgb;
+	float3 sum = TextureColor.Sample(TextureColorSampler, min(uvClamp, max(0.0, uvScale * uv))).rgb;
 	[unroll]
-	for (int i = 0; i < 4; ++i)
-		sum += TextureColor.Sample(TextureColorSampler, uv + kOffsets[i] * texel).rgb;
+	for (int i = 0; i < 4; ++i) {
+		float2 tap = uv + kOffsets[i] * texel;
+		sum += TextureColor.Sample(TextureColorSampler, min(uvClamp, max(0.0, uvScale * tap))).rgb;
+	}
 	sum *= 0.2;
 
 	return sum * saturate(dot(sum, K_LUM) - threshold);
 }
 
-float3 ApplyLensFlare(float3 color, float2 uv, float greyAdapt, float strength)
+float3 ApplyLensFlare(float3 color, float2 uv, float greyAdapt, float strength, float2 uvScale, float2 uvClamp)
 {
 	if (strength <= 0.0)
 		return color;
@@ -488,7 +490,7 @@ float3 ApplyLensFlare(float3 color, float2 uv, float greyAdapt, float strength)
 	for (int i = 0; i < 4; ++i)
 	{
 		float2 ghostVector = (uv - 0.5) * scales[i];
-		float3 sampleColor = SampleBrightBlurred(ghostVector + 0.5, threshold);
+		float3 sampleColor = SampleBrightBlurred(ghostVector + 0.5, threshold, uvScale, uvClamp);
 
 		float edgeMask = saturate(1.0 - length(ghostVector));
 
@@ -620,10 +622,11 @@ PS_OUTPUT main(PS_INPUT input)
 	// Used for imagespace tint below and as the dither seed at the end.
 	float Grey = dot(Color, K_LUM);
 
+	bool   scaleBloom = (0.5 <= Params01[0].x);
+	float2 bloomUV = scaleBloom ? scaledUV.xy : input.TexCoord.xy;
+
 	if (SGS_PostProcessingEnabled > 0.5) {
-		bool scaleBloom = (0.5 <= Params01[0].x);
 		float bloomFactor = Params01[2].x;
-		float2 bloomUV = (scaleBloom) ? scaledUV.xy : input.TexCoord.xy;
 		float3 Bloom = TextureBloom.Sample(TextureBloomSampler, bloomUV).rgb;
 		Bloom += SoftBloom(bloomUV) * 0.5;
 
@@ -722,8 +725,11 @@ PS_OUTPUT main(PS_INPUT input)
 		float depth = TextureDepth.Sample(TextureColorSampler, scaledUV).x;
 		Color = ApplyDistanceHaze(Color, scaledUV, depth, SGS_CameraNear, SGS_CameraFar, SGS_DistanceHaze);
 	}
-	Color = ApplyHighlightGlow(Color, scaledUV, SGS_HighlightGlow);
-	Color = ApplyLensFlare(Color, input.TexCoord.xy, IN.GreyAdapt, SGS_LensFlare);
+	Color = ApplyHighlightGlow(Color, bloomUV, SGS_HighlightGlow);
+	Color = ApplyLensFlare(Color, input.TexCoord.xy, IN.GreyAdapt, SGS_LensFlare,
+		DynamicRes_WidthX_HeightY_PreviousWidthZ_PreviousHeightW.xy,
+		float2(DynamicRes_InvWidthX_InvHeightY_WidthClampZ_HeightClampW.z,
+			DynamicRes_WidthX_HeightY_PreviousWidthZ_PreviousHeightW.y));
 	Color = ApplyVignette(Color, input.TexCoord.xy, SGS_Vignette);
 	Color = ApplyFilmGrain(Color, input.TexCoord.xy, SGS_GrainTime, SGS_FilmGrain);
 
