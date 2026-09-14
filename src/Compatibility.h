@@ -12,7 +12,6 @@ namespace Compatibility
         kPostProcessing = 1 << 1,
         kReflex = 1 << 2,
         kSoftShadows = 1 << 3,
-        kFieldOfView = 1 << 4,
     };
 
     bool IsSuppressed(Module a_module);

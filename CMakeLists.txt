@@ -3,7 +3,7 @@
 
 cmake_minimum_required(VERSION 3.21)
 
-project(SimpleGraphicsSuite VERSION 1.1.1 LANGUAGES CXX)
+project(SimpleGraphicsSuite VERSION 1.1.2 LANGUAGES CXX)
 
 set(PLUGIN_AUTHOR "RoseEden" CACHE STRING "Author name baked into the plugin declaration")
 
@@ -65,7 +65,6 @@ add_commonlibsse_plugin(
         src/Features/Reflex.cpp
         src/Features/PostProcessing.cpp
         src/Features/SoftShadows.cpp
-        src/Features/FieldOfView.cpp
         src/Features/Upscaling.cpp
         src/Features/DLSS.cpp
 )
