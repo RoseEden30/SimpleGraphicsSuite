@@ -19,6 +19,10 @@ namespace Reflex
         REX::W32::ID3D11Device* g_device = nullptr;
 
         std::atomic<bool> g_active{ false };
+        std::atomic<bool> g_publishPending{ false };
+
+        // NVAPI wants one incrementing ID per frame.
+        std::atomic<NvU64> g_frameId{ 0 };
 
         // What was last handed to the driver, to skip identical calls during
         // a drag and to log only real changes.
@@ -64,13 +68,13 @@ namespace Reflex
                 params.bLowLatencyBoost != 0, params.minimumIntervalUs);
         }
 
-        void OnPublish() { ApplySleepMode(*ActiveSettings()); }
+        void OnPublish() { g_publishPending.store(true); }
 
         void SetLatencyMarker(NV_LATENCY_MARKER_TYPE a_marker)
         {
             NV_LATENCY_MARKER_PARAMS params{};
             params.version = NV_LATENCY_MARKER_PARAMS_VER;
-            params.frameID = 0;  // engine doesn't expose a frame counter here; markers still pace Sleep.
+            params.frameID = g_frameId.load(std::memory_order_relaxed);
             params.markerType = a_marker;
 
             NvAPI_D3D_SetLatencyMarker(reinterpret_cast<IUnknown*>(g_device), &params);
@@ -80,6 +84,8 @@ namespace Reflex
 
         void OnPrePresent(REX::W32::ID3D11Device*, REX::W32::ID3D11DeviceContext*, REX::W32::IDXGISwapChain*)
         {
+            if (g_publishPending.exchange(false))
+                ApplySleepMode(*ActiveSettings());
             if (IsActive())
                 SetLatencyMarker(PRESENT_START);
         }
@@ -98,6 +104,7 @@ namespace Reflex
             static void thunk(std::int64_t a_unk)
             {
                 if (IsActive()) {
+                    g_frameId.fetch_add(1, std::memory_order_relaxed);
                     SetLatencyMarker(SIMULATION_START);
                     SetLatencyMarker(INPUT_SAMPLE);
                 }

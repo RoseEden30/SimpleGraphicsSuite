@@ -114,6 +114,8 @@ namespace Streamline
         logger::info("Streamline: initialized");
     }
 
+    void Skip() { g_attempted = true; }
+
     bool IsAvailable() { return g_available; }
 
     bool IsDLSSSupported() { return g_dlssSupported; }

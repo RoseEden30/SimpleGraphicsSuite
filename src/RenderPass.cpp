@@ -123,4 +123,71 @@ namespace RenderPass
 
         context->Draw(3, 0);
     }
+
+    namespace
+    {
+        template <class T>
+        void SafeRelease(T*& a_object)
+        {
+            if (a_object) {
+                a_object->Release();
+                a_object = nullptr;
+            }
+        }
+    }
+
+    StateBackup::StateBackup() :
+        _context(reinterpret_cast<ID3D11DeviceContext*>(RE::BSGraphics::Renderer::GetSingleton()->GetRuntimeData().context))
+    {
+        _context->OMGetRenderTargets(D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT, _rtvs, &_dsv);
+        _context->RSGetViewports(&_viewportCount, _viewports);
+        _context->OMGetBlendState(&_blend, _blendFactor, &_sampleMask);
+        _context->OMGetDepthStencilState(&_depthStencil, &_stencilRef);
+        _context->RSGetState(&_rasterizer);
+        _context->VSGetShader(&_vs, nullptr, nullptr);
+        _context->PSGetShader(&_ps, nullptr, nullptr);
+        _context->GSGetShader(&_gs, nullptr, nullptr);
+        _context->HSGetShader(&_hs, nullptr, nullptr);
+        _context->DSGetShader(&_ds, nullptr, nullptr);
+        _context->IAGetInputLayout(&_inputLayout);
+        _context->IAGetPrimitiveTopology(&_topology);
+        _context->PSGetShaderResources(0, 1, &_psSRV);
+        _context->PSGetSamplers(0, 1, &_psSampler);
+        _context->PSGetConstantBuffers(0, 1, &_psCB);
+    }
+
+    StateBackup::~StateBackup()
+    {
+        _context->OMSetRenderTargets(D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT, _rtvs, _dsv);
+        _context->RSSetViewports(_viewportCount, _viewports);
+        _context->OMSetBlendState(_blend, _blendFactor, _sampleMask);
+        _context->OMSetDepthStencilState(_depthStencil, _stencilRef);
+        _context->RSSetState(_rasterizer);
+        _context->VSSetShader(_vs, nullptr, 0);
+        _context->PSSetShader(_ps, nullptr, 0);
+        _context->GSSetShader(_gs, nullptr, 0);
+        _context->HSSetShader(_hs, nullptr, 0);
+        _context->DSSetShader(_ds, nullptr, 0);
+        _context->IASetInputLayout(_inputLayout);
+        _context->IASetPrimitiveTopology(_topology);
+        _context->PSSetShaderResources(0, 1, &_psSRV);
+        _context->PSSetSamplers(0, 1, &_psSampler);
+        _context->PSSetConstantBuffers(0, 1, &_psCB);
+
+        for (auto*& rtv : _rtvs)
+            SafeRelease(rtv);
+        SafeRelease(_dsv);
+        SafeRelease(_blend);
+        SafeRelease(_depthStencil);
+        SafeRelease(_rasterizer);
+        SafeRelease(_vs);
+        SafeRelease(_ps);
+        SafeRelease(_gs);
+        SafeRelease(_hs);
+        SafeRelease(_ds);
+        SafeRelease(_inputLayout);
+        SafeRelease(_psSRV);
+        SafeRelease(_psSampler);
+        SafeRelease(_psCB);
+    }
 }

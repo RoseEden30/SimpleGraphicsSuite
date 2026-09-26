@@ -12,6 +12,7 @@
 
 #include <algorithm>
 #include <array>
+#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <d3d11.h>
@@ -80,6 +81,9 @@ namespace PostProcessing
         static_assert(sizeof(ContactLightsCB) == kMaxContactLights * 16 + 16);
 
         bool NeedsReplacedShader(const Settings& a_settings);  // defined near ApplyEnabled below
+        void ApplyEnabled(bool a_enabled);
+
+        std::atomic<bool> g_reapplyPending{ false };
 
         bool IsPlayerSneaking()
         {
@@ -553,6 +557,12 @@ namespace PostProcessing
         // to stay cheap: a handful of string compares, no allocation.
         bool Hook_SetupTechnique(RE::BSShader* a_this, std::uint32_t a_technique)
         {
+            if (g_reapplyPending.exchange(false)) {
+                const auto settings = ActiveSettings();
+                UpdateSettingsBuffer(*settings);
+                ApplyEnabled(NeedsReplacedShader(*settings));
+            }
+
             const auto vtable = *reinterpret_cast<void**>(a_this);
             const auto it = g_patchedVtables.find(vtable);
             const bool result = it != g_patchedVtables.end() ? it->second(a_this, a_technique) : false;
@@ -577,9 +587,7 @@ namespace PostProcessing
                 }
 
                 if (auto* lutSRV = reinterpret_cast<REX::W32::ID3D11ShaderResourceView*>(LUT::CurrentSRV())) {
-                    auto* lutSampler = reinterpret_cast<REX::W32::ID3D11SamplerState*>(LUT::Sampler());
-                    runtimeData.context->PSSetShaderResources(8, 1, &lutSRV);
-                    runtimeData.context->PSSetSamplers(8, 1, &lutSampler);
+                    runtimeData.context->PSSetShaderResources(17, 1, &lutSRV);
                 }
 
                 // Motion vector for per-object motion blur, see MotionBlur.hlsli.
@@ -595,7 +603,7 @@ namespace PostProcessing
                     if (settings.masterEnabled && settings.postProcessing.motionBlurStrength > 0.0f && !g_pausedByMenu) {
                         auto* motionSRV = reinterpret_cast<REX::W32::ID3D11ShaderResourceView*>(
                             runtimeData.renderTargets[RE::RENDER_TARGETS::kMOTION_VECTOR].SRV);
-                        runtimeData.context->PSSetShaderResources(7, 1, &motionSRV);
+                        runtimeData.context->PSSetShaderResources(16, 1, &motionSRV);
                     }
 
                     if (settings.masterEnabled &&
@@ -604,14 +612,14 @@ namespace PostProcessing
                         auto& depthStencils = RE::BSGraphics::Renderer::GetSingleton()->GetDepthStencilData();
                         auto* depthSRV = reinterpret_cast<REX::W32::ID3D11ShaderResourceView*>(
                             depthStencils.depthStencils[RE::RENDER_TARGET_DEPTHSTENCIL::kMAIN].depthSRV);
-                        runtimeData.context->PSSetShaderResources(9, 1, &depthSRV);
+                        runtimeData.context->PSSetShaderResources(18, 1, &depthSRV);
                     }
                 }
 
                 if (settings.masterEnabled && settings.postProcessing.contactShadows) {
                     UpdateContactLightsBuffer();
                     if (g_contactLightsSRV)
-                        runtimeData.context->PSSetShaderResources(10, 1, &g_contactLightsSRV);
+                        runtimeData.context->PSSetShaderResources(19, 1, &g_contactLightsSRV);
                 }
 
                 // Fades in and out on a sneak/stand transition instead of
@@ -764,12 +772,7 @@ namespace PostProcessing
         }
     }
 
-    void Reapply()
-    {
-        const auto settings = ActiveSettings();
-        UpdateSettingsBuffer(*settings);
-        ApplyEnabled(NeedsReplacedShader(*settings));
-    }
+    void Reapply() { g_reapplyPending.store(true); }
 
     std::size_t ReplacedShaderCount() { return g_replaced.size(); }
 

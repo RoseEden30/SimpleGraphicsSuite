@@ -9,6 +9,27 @@ namespace DeviceHook
 {
     namespace
     {
+        bool IsNvidia(REX::W32::ID3D11Device* a_device)
+        {
+            REX::W32::IDXGIDevice* dxgiDevice = nullptr;
+            if (FAILED(a_device->QueryInterface(REX::W32::IID_IDXGIDevice, reinterpret_cast<void**>(&dxgiDevice))) ||
+                !dxgiDevice)
+                return false;
+
+            REX::W32::IDXGIAdapter* adapter = nullptr;
+            const auto hadAdapter = SUCCEEDED(dxgiDevice->GetAdapter(&adapter)) && adapter;
+            dxgiDevice->Release();
+            if (!hadAdapter)
+                return false;
+
+            REX::W32::DXGI_ADAPTER_DESC desc{};
+            const auto hadDesc = SUCCEEDED(adapter->GetDesc(&desc));
+            adapter->Release();
+
+            constexpr std::uint32_t kNvidiaVendorId = 0x10DE;
+            return hadDesc && desc.vendorId == kNvidiaVendorId;
+        }
+
         using D3D11CreateDeviceAndSwapChain_t = decltype(&REX::W32::D3D11CreateDeviceAndSwapChain);
         D3D11CreateDeviceAndSwapChain_t g_original = nullptr;
 
@@ -31,7 +52,10 @@ namespace DeviceHook
                 // per-frame bookkeeping never runs. slSetD3DDevice then takes
                 // the upgraded device. DLAA is the only caller, so a mod owning
                 // anti-aliasing owns the interposer too.
-                if (!Compatibility::IsSuppressed(Compatibility::kAntiAliasing)) {
+                if (a_device && *a_device && !IsNvidia(*a_device)) {
+                    Streamline::Skip();
+                    logger::info("DeviceHook: not an NVIDIA adapter, Streamline not loaded");
+                } else if (!Compatibility::IsSuppressed(Compatibility::kAntiAliasing)) {
                     Streamline::EnsureInitialized();
                     Streamline::UpgradeInterface(reinterpret_cast<void**>(a_device));
                     Streamline::UpgradeInterface(reinterpret_cast<void**>(a_swapChain));

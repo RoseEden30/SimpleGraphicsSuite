@@ -1,7 +1,6 @@
 #pragma once
 
 struct ID3D11ShaderResourceView;
-struct ID3D11SamplerState;
 
 // 3D color grading LUTs (.cube format), applied after tonemapping in the
 // Vanilla HDR shader - same idea as Starfield's swappable color grading.
@@ -20,6 +19,5 @@ namespace LUT
     bool Select(const std::string& a_name);
 
     ID3D11ShaderResourceView* CurrentSRV();
-    ID3D11SamplerState*       Sampler();
     std::uint32_t             CurrentSize();
 }

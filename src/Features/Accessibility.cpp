@@ -151,6 +151,8 @@ namespace Accessibility
             a_context->CopyResource(
                 static_cast<REX::W32::ID3D11Resource*>(g_copyTexture), static_cast<REX::W32::ID3D11Resource*>(backBuffer));
 
+            const RenderPass::StateBackup backup;
+
             REX::W32::D3D11_MAPPED_SUBRESOURCE mapped{};
             if (SUCCEEDED(a_context->Map(
                     static_cast<REX::W32::ID3D11Resource*>(g_settingsBuffer), 0, REX::W32::D3D11_MAP_WRITE_DISCARD, 0, &mapped))) {

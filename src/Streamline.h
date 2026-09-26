@@ -14,6 +14,9 @@ namespace Streamline
     // repeatedly; does nothing once already attempted.
     void EnsureInitialized();
 
+    // For adapters that can't run DLSS.
+    void Skip();
+
     bool IsAvailable();
 
     // Per-adapter DLSS capability, set by SetDevice.

@@ -9,7 +9,7 @@
 
 // Elements 0..MAX-1: nearby point lights (xyz world pos, w range).
 // Element MAX: x = light count, y = interior flag.
-Buffer<float4> SGS_CSLightData : register(t10);
+Buffer<float4> SGS_CSLightData : register(t19);
 
 static const int   SGS_CS_STEPS = 16;
 static const float SGS_CS_LENGTH_FRAC = 0.03;

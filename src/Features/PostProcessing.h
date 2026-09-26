@@ -7,8 +7,7 @@ namespace PostProcessing
 {
     void InstallHooks();
 
-    // Pushes the current settings to the GPU buffer and binds (or unbinds)
-    // the replaced shaders. Registered as a publish callback.
+    // Applied on the next draw. Registered as a publish callback.
     void Reapply();
 
     // Debug tab support: how many of our shaders are currently active, and a

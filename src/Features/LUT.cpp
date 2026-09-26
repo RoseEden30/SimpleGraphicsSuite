@@ -19,7 +19,6 @@ namespace LUT
         std::uint32_t              g_size = 0;
         ID3D11Texture3D*           g_texture = nullptr;
         ID3D11ShaderResourceView*  g_srv = nullptr;
-        ID3D11SamplerState*        g_sampler = nullptr;
 
         void ReleaseTexture()
         {
@@ -33,22 +32,6 @@ namespace LUT
             }
             g_size = 0;
             g_loadedName.clear();
-        }
-
-        void EnsureSampler(ID3D11Device* a_device)
-        {
-            if (g_sampler)
-                return;
-
-            D3D11_SAMPLER_DESC desc{};
-            desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
-            desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
-            desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
-            desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
-            desc.MaxLOD = D3D11_FLOAT32_MAX;
-
-            if (FAILED(a_device->CreateSamplerState(&desc, &g_sampler)))
-                logger::warn("LUT: couldn't create the sampler state");
         }
 
         // Standard .cube: "LUT_3D_SIZE N" then N^3 "R G B" triplets in
@@ -115,7 +98,6 @@ namespace LUT
                 return false;
 
             auto* device = reinterpret_cast<ID3D11Device*>(RE::BSGraphics::Renderer::GetSingleton()->GetRuntimeData().forwarder);
-            EnsureSampler(device);
 
             D3D11_TEXTURE3D_DESC desc{};
             desc.Width = desc.Height = desc.Depth = size;
@@ -188,6 +170,5 @@ namespace LUT
     }
 
     ID3D11ShaderResourceView* CurrentSRV() { return g_srv; }
-    ID3D11SamplerState*       Sampler() { return g_sampler; }
     std::uint32_t             CurrentSize() { return g_size; }
 }
