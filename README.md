@@ -31,17 +31,19 @@ cmake --preset release
 cmake --build build/release
 ```
 
-The third-party SDKs under `extern/` are not stored in this repository. Fetch
-them before configuring:
+`extern/CommonLibSSE-NG` is a submodule pinned to a tested release. Fetch it
+with the repository:
 
-- `extern/CommonLibSSE-NG` - cloned separately (see below)
+```
+git submodule update --init --recursive
+```
+
+The NVIDIA SDKs under `extern/` are not stored in this repository. Fetch them
+before configuring:
+
 - `extern/nvapi` - the NVIDIA NVAPI SDK (`nvapi.h`, headers, `amd64/nvapi64.lib`)
 - `extern/Streamline` - an NVIDIA Streamline SDK release, keeping its `include/`
   and `bin/x64/` layout
-
-```
-git clone --recurse-submodules https://github.com/alandtse/CommonLibSSE-NG.git extern/CommonLibSSE-NG
-```
 
 Run the two cmake commands from an **x64 Native Tools Command Prompt for
 VS 2022**, so the MSVC environment is set up.

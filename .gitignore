@@ -10,5 +10,6 @@ CMakeUserPresets.json
 *.user
 *.aps
 
-# Third-party SDKs, fetched locally (see README)
-extern/
+# Third-party SDKs, fetched locally (see README). CommonLibSSE-NG is a submodule.
+extern/*
+!extern/CommonLibSSE-NG
