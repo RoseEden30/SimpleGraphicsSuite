@@ -579,24 +579,35 @@ namespace PostProcessing
             g_originalMainPostProcessing(a_this, a3, a_target, a4, a5);
         }
 
-        // Patches the function entry directly (write_branch can't relocate a
-        // clobbered prologue on its own). Offsets from doodlum's SSEShaderTools.
+        constexpr std::uintptr_t kLoadShadersEntrySize = 9;
+
         struct Patch : Xbyak::CodeGenerator
         {
-            explicit Patch(std::uintptr_t a_originalFunc)
+            Patch(std::uintptr_t a_resume, std::uintptr_t a_nullStream)
             {
-                Xbyak::Label nonNullLabel;
+                Xbyak::Label nullStream;
 
                 test(rdx, rdx);
-                jz(nonNullLabel);
+                jz(nullStream);
                 jmp(ptr[rip]);
-                dq(a_originalFunc + 0x9);
+                dq(a_resume);
 
-                L(nonNullLabel);
+                L(nullStream);
                 jmp(ptr[rip]);
-                dq(a_originalFunc + 0xF0);
+                dq(a_nullStream);
             }
         };
+
+        std::uintptr_t NullStreamTarget(std::uintptr_t a_entry)
+        {
+            constexpr std::array<std::uint8_t, 5> kEntry = { 0x48, 0x85, 0xD2, 0x0F, 0x84 };
+            if (std::memcmp(reinterpret_cast<const void*>(a_entry), kEntry.data(), kEntry.size()) != 0)
+                return 0;
+
+            std::int32_t displacement;
+            std::memcpy(&displacement, reinterpret_cast<const void*>(a_entry + kEntry.size()), sizeof(displacement));
+            return a_entry + kLoadShadersEntrySize + displacement;
+        }
 
         // Any effect living in the replaced shader has to keep it bound, not
         // just the grading toggle. Upscaling counts: its FSR1 EASU
@@ -668,14 +679,18 @@ namespace PostProcessing
 
     void InstallHooks()
     {
-        const auto target = RELOCATION_ID(101339, 108326).address();
-
-        Patch patch{ target };
-        patch.ready();
-
         auto& trampoline = SKSE::GetTrampoline();
-        g_originalLoadShaders = reinterpret_cast<LoadShaders_t>(trampoline.allocate(patch));
-        trampoline.write_branch<6>(target, Hook_LoadShaders);
+
+        const auto target = RELOCATION_ID(101339, 108326).address();
+        if (const auto nullStream = NullStreamTarget(target)) {
+            Patch patch{ target + kLoadShadersEntrySize, nullStream };
+            patch.ready();
+            g_originalLoadShaders = reinterpret_cast<LoadShaders_t>(trampoline.allocate(patch));
+            trampoline.write_branch<6>(target, Hook_LoadShaders);
+            logger::info("Post-processing shader hook installed");
+        } else {
+            logger::error("Post-processing: unexpected BSShader::LoadShaders entry, shaders won't be replaced");
+        }
 
         // Call site inside the engine's own post-processing entry point -
         // verified against alandtse's open-shaders (their Main_PostProcessing,
@@ -684,8 +699,6 @@ namespace PostProcessing
             RELOCATION_ID(100430, 107148).address() + REL::Relocate<std::uintptr_t>(0x1F0, 0x1E7, 0x206);
         g_originalMainPostProcessing =
             reinterpret_cast<MainPostProcessing_t>(trampoline.write_call<5>(postProcessingCall, &Hook_MainPostProcessing));
-
-        logger::info("Post-processing shader hook installed");
 
         RegisterPublishCallback(&Reapply);
         PresentHook::RegisterPrePresent(&OnPrePresent);
