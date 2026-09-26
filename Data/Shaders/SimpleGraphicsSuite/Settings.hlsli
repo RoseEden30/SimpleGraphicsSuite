@@ -34,8 +34,9 @@ cbuffer SimpleGraphicsSuiteSettings : register(b13)
 	float SGS_LoadingScreen;  // 1 while the loading menu is open, else 0
 	float SGS_UnderwaterWarp;  // 0.0-1.0, fades in and out when diving
 	float SGS_LensDrops;       // 0.0-1.0, fades to 0 as the lens dries
-	float SGS_LensDropsTime;   // seconds, random origin per surfacing
+	float SGS_LensDropsTime;   // seconds, random origin per wetting
 	float SGS_DiveSplash;      // 1 on diving in, fades to 0
+	float SGS_LensFilm;        // 1 on surfacing, fades to 0
 };
 
 #define SHARPENING_AMOUNT SGS_Sharpening

@@ -30,7 +30,6 @@ float2 SGS_DropLayer(float2 uv, float scale, float time, float amount, float see
 	float2 cell = floor(p) + seed;
 	float  h = SGS_Hash12(cell);
 
-	// Drops thin out as the lens dries, each one fading instead of popping.
 	float presence = saturate((amount - h) * 10.0);
 	if (presence <= 0.0)
 		return 0.0;
@@ -39,7 +38,6 @@ float2 SGS_DropLayer(float2 uv, float scale, float time, float amount, float see
 	float2 drop = float2(lerp(0.3, 0.7, SGS_Hash12(cell + 3.7)), frac(h * 13.0 + time * speed));
 	float2 d = (frac(p) - drop) * cellSize;
 
-	// Kept off the cell edges, which would clip it.
 	presence *= smoothstep(0.0, 0.1, drop.y) * smoothstep(1.0, 0.9, drop.y);
 
 	float inside = smoothstep(radius, radius * 0.6, length(d));
@@ -50,7 +48,7 @@ float2 SGS_DropLayer(float2 uv, float scale, float time, float amount, float see
 	return offset * presence / (scale * float2(aspect, 1.0));
 }
 
-float2 SGS_ApplyWater(float2 uv, float time, float warp, float splash, float drops, float dropsTime)
+float2 SGS_ApplyWater(float2 uv, float time, float warp, float splash, float film, float drops, float dropsTime)
 {
 	if (warp > 0.0) {
 		uv += SGS_WaterWarp(uv, time, float2(23.0, 17.0), float2(0.5, 0.7), warp * 0.003);
@@ -60,12 +58,14 @@ float2 SGS_ApplyWater(float2 uv, float time, float warp, float splash, float dro
 	if (splash > 0.0)
 		uv += SGS_WaterWarp(uv, time, float2(89.0, 71.0), float2(1.3, 1.7), splash * splash * 0.012);
 
-	if (drops > 0.0) {
-		// Film of water running off right after surfacing.
-		float film = drops * drops;
-		uv += SGS_WaterWarp(uv, time, float2(23.0, 17.0), float2(0.5, 0.7), film * film * 0.01);
-		uv += SGS_DropLayer(uv, 10.0, dropsTime, drops, 0.0) + SGS_DropLayer(uv, 18.0, dropsTime, drops, 41.0);
+	if (film > 0.0) {
+		float film2 = film * film;
+		uv += SGS_WaterWarp(uv, time, float2(23.0, 17.0), float2(0.5, 0.7), film2 * film2 * 0.01);
 	}
+
+	if (drops > 0.0)
+		uv += SGS_DropLayer(uv, 10.0, dropsTime, drops, 0.0) + SGS_DropLayer(uv, 18.0, dropsTime, drops, 41.0);
+
 	return saturate(uv);
 }
 

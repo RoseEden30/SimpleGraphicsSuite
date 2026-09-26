@@ -61,7 +61,7 @@ namespace PostProcessing
             float lensDrops;
             float lensDropsTime;
             float diveSplash;
-            float pad0;
+            float lensFilm;
             float pad1;
             float pad2;
         };
@@ -152,30 +152,60 @@ namespace PostProcessing
         }
 
         // The engine's flag can stay stuck after surfacing, hence the height check.
-        bool IsCameraUnderwater()
+        bool IsCameraUnderwater(const RE::NiPoint3& a_camera)
         {
             auto* water = RE::TESWaterSystem::GetSingleton();
-            auto* ssn = RE::BSShaderManager::State::GetSingleton().shadowSceneNode[0];
-            return water && ssn && water->playerUnderwater &&
-                ssn->GetRuntimeData().cameraPos.z < water->underwaterHeight;
+            return water && water->playerUnderwater && a_camera.z < water->underwaterHeight;
+        }
+
+        // Sheltered when anything with collision is straight above the camera.
+        bool IsRainOnCamera(const RE::NiPoint3& a_camera)
+        {
+            auto* sky = RE::Sky::GetSingleton();
+            auto* tes = RE::TES::GetSingleton();
+            auto* player = RE::PlayerCharacter::GetSingleton();
+            if (!sky || !tes || !player || sky->mode.get() != RE::Sky::Mode::kFull || !sky->IsRaining())
+                return false;
+
+            constexpr float kRayHeight = 100000.0f;  // above any worldspace geometry
+            const float     scale = RE::bhkWorld::GetWorldScale();
+
+            RE::bhkPickData pick{};
+            // The player's own filter, so the ray passes through the player.
+            player->GetCollisionFilterInfo(pick.rayInput.filterInfo);
+            pick.rayInput.from = RE::hkVector4(a_camera.x * scale, a_camera.y * scale, a_camera.z * scale, 0.0f);
+            pick.rayInput.to = RE::hkVector4(a_camera.x * scale, a_camera.y * scale, (a_camera.z + kRayHeight) * scale, 0.0f);
+            tes->Pick(pick);
+            return !pick.rayOutput.HasHit();
         }
 
         constexpr float kUnderwaterFadeSeconds = 0.25f;
-        constexpr float kLensDropsSeconds = 4.0f;
         constexpr float kDiveSplashSeconds = 1.0f;
+        constexpr float kLensDropsSeconds = 4.0f;
+        constexpr float kRainWetSeconds = 2.0f;
+        constexpr float kRainLensDrops = 0.5f;
         // A menu that stops rendering must not skip the animation ahead.
         constexpr float kMaxWaterStepSeconds = 0.1f;
 
         float                                 g_underwaterCurrent = 0.0f;
-        float                                 g_lensDropsCurrent = 0.0f;
-        float                                 g_lensDropsTime = 0.0f;
         float                                 g_diveSplash = 0.0f;
+        float                                 g_lensDropsCurrent = 0.0f;
+        float                                 g_lensFilm = 0.0f;
+        float                                 g_lensDropsTime = 0.0f;
         bool                                  g_wasUnderwater = false;
         bool                                  g_waterPrimed = false;
         bool                                  g_waterWasActive = false;
         std::chrono::steady_clock::time_point g_waterLastTick = std::chrono::steady_clock::now();
 
-        // True when the settings buffer needs rewriting.
+        void ResetWater()
+        {
+            g_underwaterCurrent = 0.0f;
+            g_diveSplash = 0.0f;
+            g_lensDropsCurrent = 0.0f;
+            g_lensFilm = 0.0f;
+            g_waterPrimed = false;
+        }
+
         bool StepWater(const Settings& a_settings)
         {
             const auto now = std::chrono::steady_clock::now();
@@ -183,42 +213,57 @@ namespace PostProcessing
                 std::clamp(std::chrono::duration<float>(now - g_waterLastTick).count(), 0.0f, kMaxWaterStepSeconds);
             g_waterLastTick = now;
 
-            if (!a_settings.masterEnabled || !a_settings.postProcessing.waterEffects || g_loadingMenuOpen) {
-                g_underwaterCurrent = 0.0f;
-                g_lensDropsCurrent = 0.0f;
-                g_diveSplash = 0.0f;
-                g_waterPrimed = false;
+            auto* ssn = RE::BSShaderManager::State::GetSingleton().shadowSceneNode[0];
+            const auto& pp = a_settings.postProcessing;
+            if (!a_settings.masterEnabled || (!pp.underwaterEffects && !pp.rainDrops) || g_loadingMenuOpen || !ssn) {
+                ResetWater();
             } else {
-                const bool underwater = IsCameraUnderwater();
+                const auto camera = ssn->GetRuntimeData().cameraPos;
+                const bool underwater = IsCameraUnderwater(camera);
                 // After a load or a toggle, adopt the current state instead of treating it as a transition.
                 if (!g_waterPrimed) {
                     g_wasUnderwater = underwater;
                     g_waterPrimed = true;
                 }
-                if (!g_wasUnderwater && underwater)
+                if (!pp.underwaterEffects) {
+                    g_diveSplash = 0.0f;
+                    g_lensFilm = 0.0f;
+                } else if (!g_wasUnderwater && underwater) {
                     g_diveSplash = 1.0f;
-                if (g_wasUnderwater && !underwater) {
+                } else if (g_wasUnderwater && !underwater) {
                     g_diveSplash = 0.0f;
                     g_lensDropsCurrent = 1.0f;
+                    g_lensFilm = 1.0f;
                     // Varying origin: a new drop layout each time.
                     g_lensDropsTime = GrainTime();
                 }
                 g_wasUnderwater = underwater;
 
                 const float fade = delta / kUnderwaterFadeSeconds;
-                g_underwaterCurrent =
-                    underwater ? std::min(g_underwaterCurrent + fade, 1.0f) : std::max(g_underwaterCurrent - fade, 0.0f);
+                g_underwaterCurrent = underwater && pp.underwaterEffects ? std::min(g_underwaterCurrent + fade, 1.0f) :
+                                                                         std::max(g_underwaterCurrent - fade, 0.0f);
 
                 if (underwater) {
-                    g_lensDropsCurrent = 0.0f;
                     g_diveSplash = std::max(g_diveSplash - delta / kDiveSplashSeconds, 0.0f);
-                } else if (g_lensDropsCurrent > 0.0f) {
-                    g_lensDropsCurrent = std::max(g_lensDropsCurrent - delta / kLensDropsSeconds, 0.0f);
-                    g_lensDropsTime += delta;
+                    g_lensDropsCurrent = 0.0f;
+                    g_lensFilm = 0.0f;
+                } else {
+                    // Nothing moves while paused, so the ray can wait.
+                    const float target = delta > 0.0f && pp.rainDrops && IsRainOnCamera(camera) ? kRainLensDrops : 0.0f;
+                    if (g_lensDropsCurrent < target) {
+                        if (g_lensDropsCurrent <= 0.0f)
+                            g_lensDropsTime = GrainTime();
+                        g_lensDropsCurrent = std::min(g_lensDropsCurrent + delta / kRainWetSeconds, target);
+                    } else {
+                        g_lensDropsCurrent = std::max(g_lensDropsCurrent - delta / kLensDropsSeconds, target);
+                    }
+                    g_lensFilm = std::max(g_lensFilm - delta / kLensDropsSeconds, 0.0f);
+                    if (g_lensDropsCurrent > 0.0f)
+                        g_lensDropsTime += delta;
                 }
             }
 
-            const bool active = g_underwaterCurrent > 0.0f || g_lensDropsCurrent > 0.0f || g_diveSplash > 0.0f;
+            const bool active = g_underwaterCurrent > 0.0f || g_diveSplash > 0.0f || g_lensDropsCurrent > 0.0f;
             const bool dirty = active || g_waterWasActive;
             g_waterWasActive = active;
             return dirty;
@@ -304,6 +349,7 @@ namespace PostProcessing
             dst->lensDrops = g_lensDropsCurrent;
             dst->lensDropsTime = g_lensDropsTime;
             dst->diveSplash = g_diveSplash;
+            dst->lensFilm = g_lensFilm;
 
             context->Unmap(static_cast<REX::W32::ID3D11Resource*>(g_settingsBuffer), 0);
         }
@@ -702,7 +748,7 @@ namespace PostProcessing
             const auto& pp = a_settings.postProcessing;
             return pp.enabled || pp.sharpening > 0.0f || pp.motionBlurStrength > 0.0f || pp.vignette > 0.0f ||
                 pp.filmGrain > 0.0f || pp.lensFlare > 0.0f || pp.distanceHaze > 0.0f || pp.highlightGlow > 0.0f ||
-                pp.waterEffects || pp.contactShadows || !pp.lutName.empty() || a_settings.upscaling.enabled;
+                pp.underwaterEffects || pp.rainDrops || pp.contactShadows || !pp.lutName.empty() || a_settings.upscaling.enabled;
         }
 
         int g_loggedEnabled = -1;

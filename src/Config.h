@@ -52,7 +52,8 @@ struct Settings
         float lensFlare = 0.0f;  // 0.0-1.0, 0=off
         float distanceHaze = 0.0f;  // 0.0-1.0, 0=off
         float highlightGlow = 0.0f;  // 0.0-1.0, 0=off
-        bool waterEffects = false;
+        bool underwaterEffects = false;
+        bool rainDrops = false;
         bool contactShadows = false;
 
         // 3D color grading LUT (.cube), scanned from

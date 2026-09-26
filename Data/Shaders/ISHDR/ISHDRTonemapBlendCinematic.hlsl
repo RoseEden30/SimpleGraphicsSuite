@@ -567,7 +567,8 @@ PS_OUTPUT main(PS_INPUT input)
 
 	float2 texCoord = input.TexCoord.xy;
 	if (SGS_LoadingScreen < 0.5)
-		texCoord = SGS_ApplyWater(texCoord, SGS_GrainTime, SGS_UnderwaterWarp, SGS_DiveSplash, SGS_LensDrops, SGS_LensDropsTime);
+		texCoord = SGS_ApplyWater(texCoord, SGS_GrainTime, SGS_UnderwaterWarp, SGS_DiveSplash, SGS_LensFilm, SGS_LensDrops,
+			SGS_LensDropsTime);
 
 	float2 scaledUV = clamp(0.0, float2(DynamicRes_InvWidthX_InvHeightY_WidthClampZ_HeightClampW.z, DynamicRes_WidthX_HeightY_PreviousWidthZ_PreviousHeightW.y), DynamicRes_WidthX_HeightY_PreviousWidthZ_PreviousHeightW.xy * texCoord);
 
