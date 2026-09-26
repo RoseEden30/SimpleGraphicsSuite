@@ -165,12 +165,14 @@ struct PS_OUTPUT
 #include "../SimpleGraphicsSuite/LUT.hlsli"
 #include "../SimpleGraphicsSuite/MotionBlur.hlsli"
 #include "../SimpleGraphicsSuite/ContactShadows.hlsli"
+#include "../SimpleGraphicsSuite/Water.hlsli"
 #include "../ISHDR/ictcp_colorspaces.fx"
 #else
 #include "SimpleGraphicsSuite/FSR1.hlsli"
 #include "SimpleGraphicsSuite/LUT.hlsli"
 #include "SimpleGraphicsSuite/MotionBlur.hlsli"
 #include "SimpleGraphicsSuite/ContactShadows.hlsli"
+#include "SimpleGraphicsSuite/Water.hlsli"
 #include "ictcp_colorspaces.fx"
 #endif
 
@@ -563,7 +565,11 @@ PS_OUTPUT main(PS_INPUT input)
 
 	ShaderParams IN = OUT;
 
-	float2 scaledUV = clamp(0.0, float2(DynamicRes_InvWidthX_InvHeightY_WidthClampZ_HeightClampW.z, DynamicRes_WidthX_HeightY_PreviousWidthZ_PreviousHeightW.y), DynamicRes_WidthX_HeightY_PreviousWidthZ_PreviousHeightW.xy * input.TexCoord.xy);
+	float2 texCoord = input.TexCoord.xy;
+	if (SGS_LoadingScreen < 0.5)
+		texCoord = SGS_ApplyWater(texCoord, SGS_GrainTime, SGS_UnderwaterWarp, SGS_DiveSplash, SGS_LensDrops, SGS_LensDropsTime);
+
+	float2 scaledUV = clamp(0.0, float2(DynamicRes_InvWidthX_InvHeightY_WidthClampZ_HeightClampW.z, DynamicRes_WidthX_HeightY_PreviousWidthZ_PreviousHeightW.y), DynamicRes_WidthX_HeightY_PreviousWidthZ_PreviousHeightW.xy * texCoord);
 
 	float3 Color;
 	if (SGS_UpscalingEnabled > 0.5) {
@@ -573,7 +579,7 @@ PS_OUTPUT main(PS_INPUT input)
 		// the buffer's own full size, replacing the plain bilinear sample.
 		float2 fullSizeInPixels = float2(rcp(SCREEN_INV_WIDTH), rcp(SCREEN_INV_HEIGHT));
 		float2 renderSizeInPixels = DynamicRes_WidthX_HeightY_PreviousWidthZ_PreviousHeightW.xy * fullSizeInPixels;
-		Color = SGS_ApplyFSR1EASU(TextureColor, TextureColorSampler, fullSizeInPixels, renderSizeInPixels, fullSizeInPixels, input.TexCoord.xy);
+		Color = SGS_ApplyFSR1EASU(TextureColor, TextureColorSampler, fullSizeInPixels, renderSizeInPixels, fullSizeInPixels, texCoord);
 	} else {
 		Color = TextureColor.Sample(TextureColorSampler, scaledUV.xy);
 	}
@@ -592,7 +598,7 @@ PS_OUTPUT main(PS_INPUT input)
 	// RCAS diluted every pixel's sharpening with unsharpened samples.
 	if (SGS_MotionBlurAmount > 0.0) {
 		Color = SGS_ApplyMotionBlurPerObject(TextureColor, TextureColorSampler, TextureMotionVector,
-			TextureColorSampler, TextureDepth, TextureColorSampler, input.TexCoord.xy,
+			TextureColorSampler, TextureDepth, TextureColorSampler, texCoord,
 			DynamicRes_WidthX_HeightY_PreviousWidthZ_PreviousHeightW.xy,
 			float2(DynamicRes_InvWidthX_InvHeightY_WidthClampZ_HeightClampW.z,
 				DynamicRes_WidthX_HeightY_PreviousWidthZ_PreviousHeightW.y),
@@ -608,7 +614,7 @@ PS_OUTPUT main(PS_INPUT input)
 #ifndef VR
 	if (SGS_ContactShadows > 0.0) {
 		float contactShadow = SGS_ContactShadow(TextureDepth, TextureColorSampler,
-			input.TexCoord.xy, input.Position.xy,
+			texCoord, input.Position.xy,
 			DynamicRes_WidthX_HeightY_PreviousWidthZ_PreviousHeightW.xy,
 			float2(DynamicRes_InvWidthX_InvHeightY_WidthClampZ_HeightClampW.z,
 				DynamicRes_WidthX_HeightY_PreviousWidthZ_PreviousHeightW.y),
@@ -623,7 +629,7 @@ PS_OUTPUT main(PS_INPUT input)
 	float Grey = dot(Color, K_LUM);
 
 	bool   scaleBloom = (0.5 <= Params01[0].x);
-	float2 bloomUV = scaleBloom ? scaledUV.xy : input.TexCoord.xy;
+	float2 bloomUV = scaleBloom ? scaledUV.xy : texCoord;
 
 	if (SGS_PostProcessingEnabled > 0.5) {
 		float bloomFactor = Params01[2].x;
@@ -717,7 +723,7 @@ PS_OUTPUT main(PS_INPUT input)
 		Color = Color * GammaInvX_FirstPersonY_AlphaPassZ_CreationKitW.x;
 		Color = exp2(Color);
 	} else {
-		Color = Vanilla(Color, input.TexCoord.xy, scaledUV.xy);
+		Color = Vanilla(Color, texCoord, scaledUV.xy);
 	}
 
 	Color = SGS_ApplyLUT(LUTTexture, LUTSampler, Color, SGS_LUTStrength, SGS_LUTSize);

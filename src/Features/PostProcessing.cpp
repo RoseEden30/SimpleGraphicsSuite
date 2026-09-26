@@ -57,11 +57,15 @@ namespace PostProcessing
             float lightDirY;
             float lightDirZ;
             float loadingScreen;
+            float underwaterWarp;
+            float lensDrops;
+            float lensDropsTime;
+            float diveSplash;
             float pad0;
             float pad1;
             float pad2;
         };
-        static_assert(sizeof(SettingsCB) == 112);
+        static_assert(sizeof(SettingsCB) == 128);
 
         // Matches SGS_CSLightData (Buffer<float4> at t10) in ContactShadows.hlsli.
         constexpr std::size_t kMaxContactLights = 4;
@@ -147,6 +151,79 @@ namespace PostProcessing
             return true;
         }
 
+        // The engine's flag can stay stuck after surfacing, hence the height check.
+        bool IsCameraUnderwater()
+        {
+            auto* water = RE::TESWaterSystem::GetSingleton();
+            auto* ssn = RE::BSShaderManager::State::GetSingleton().shadowSceneNode[0];
+            return water && ssn && water->playerUnderwater &&
+                ssn->GetRuntimeData().cameraPos.z < water->underwaterHeight;
+        }
+
+        constexpr float kUnderwaterFadeSeconds = 0.25f;
+        constexpr float kLensDropsSeconds = 4.0f;
+        constexpr float kDiveSplashSeconds = 1.0f;
+        // A menu that stops rendering must not skip the animation ahead.
+        constexpr float kMaxWaterStepSeconds = 0.1f;
+
+        float                                 g_underwaterCurrent = 0.0f;
+        float                                 g_lensDropsCurrent = 0.0f;
+        float                                 g_lensDropsTime = 0.0f;
+        float                                 g_diveSplash = 0.0f;
+        bool                                  g_wasUnderwater = false;
+        bool                                  g_waterPrimed = false;
+        bool                                  g_waterWasActive = false;
+        std::chrono::steady_clock::time_point g_waterLastTick = std::chrono::steady_clock::now();
+
+        // True when the settings buffer needs rewriting.
+        bool StepWater(const Settings& a_settings)
+        {
+            const auto now = std::chrono::steady_clock::now();
+            const float delta = g_pausedByMenu ? 0.0f :
+                std::clamp(std::chrono::duration<float>(now - g_waterLastTick).count(), 0.0f, kMaxWaterStepSeconds);
+            g_waterLastTick = now;
+
+            if (!a_settings.masterEnabled || !a_settings.postProcessing.waterEffects || g_loadingMenuOpen) {
+                g_underwaterCurrent = 0.0f;
+                g_lensDropsCurrent = 0.0f;
+                g_diveSplash = 0.0f;
+                g_waterPrimed = false;
+            } else {
+                const bool underwater = IsCameraUnderwater();
+                // After a load or a toggle, adopt the current state instead of treating it as a transition.
+                if (!g_waterPrimed) {
+                    g_wasUnderwater = underwater;
+                    g_waterPrimed = true;
+                }
+                if (!g_wasUnderwater && underwater)
+                    g_diveSplash = 1.0f;
+                if (g_wasUnderwater && !underwater) {
+                    g_diveSplash = 0.0f;
+                    g_lensDropsCurrent = 1.0f;
+                    // Varying origin: a new drop layout each time.
+                    g_lensDropsTime = GrainTime();
+                }
+                g_wasUnderwater = underwater;
+
+                const float fade = delta / kUnderwaterFadeSeconds;
+                g_underwaterCurrent =
+                    underwater ? std::min(g_underwaterCurrent + fade, 1.0f) : std::max(g_underwaterCurrent - fade, 0.0f);
+
+                if (underwater) {
+                    g_lensDropsCurrent = 0.0f;
+                    g_diveSplash = std::max(g_diveSplash - delta / kDiveSplashSeconds, 0.0f);
+                } else if (g_lensDropsCurrent > 0.0f) {
+                    g_lensDropsCurrent = std::max(g_lensDropsCurrent - delta / kLensDropsSeconds, 0.0f);
+                    g_lensDropsTime += delta;
+                }
+            }
+
+            const bool active = g_underwaterCurrent > 0.0f || g_lensDropsCurrent > 0.0f || g_diveSplash > 0.0f;
+            const bool dirty = active || g_waterWasActive;
+            g_waterWasActive = active;
+            return dirty;
+        }
+
         REX::W32::ID3D11Buffer* g_settingsBuffer = nullptr;
         REX::W32::ID3D11Buffer*             g_contactLightsBuffer = nullptr;
         REX::W32::ID3D11ShaderResourceView* g_contactLightsSRV = nullptr;
@@ -223,6 +300,10 @@ namespace PostProcessing
             dst->lightDirY = sunDir.y;
             dst->lightDirZ = sunDir.z;
             dst->loadingScreen = g_loadingMenuOpen ? 1.0f : 0.0f;
+            dst->underwaterWarp = g_underwaterCurrent;
+            dst->lensDrops = g_lensDropsCurrent;
+            dst->lensDropsTime = g_lensDropsTime;
+            dst->diveSplash = g_diveSplash;
 
             context->Unmap(static_cast<REX::W32::ID3D11Resource*>(g_settingsBuffer), 0);
         }
@@ -498,7 +579,8 @@ namespace PostProcessing
                     g_vignetteCurrent = settings.postProcessing.vignette;
                 }
 
-                if (settings.postProcessing.filmGrain > 0.0f || settings.postProcessing.contactShadows)
+                const bool waterDirty = StepWater(settings);
+                if (settings.postProcessing.filmGrain > 0.0f || settings.postProcessing.contactShadows || waterDirty)
                     UpdateSettingsBuffer(settings);
             }
 
@@ -620,7 +702,7 @@ namespace PostProcessing
             const auto& pp = a_settings.postProcessing;
             return pp.enabled || pp.sharpening > 0.0f || pp.motionBlurStrength > 0.0f || pp.vignette > 0.0f ||
                 pp.filmGrain > 0.0f || pp.lensFlare > 0.0f || pp.distanceHaze > 0.0f || pp.highlightGlow > 0.0f ||
-                pp.contactShadows || !pp.lutName.empty() || a_settings.upscaling.enabled;
+                pp.waterEffects || pp.contactShadows || !pp.lutName.empty() || a_settings.upscaling.enabled;
         }
 
         int g_loggedEnabled = -1;

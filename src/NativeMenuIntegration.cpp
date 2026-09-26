@@ -65,6 +65,14 @@ namespace NativeMenuIntegration
             RequestSaveSettings();
         }
 
+        float __stdcall GetWaterEffects() { return ActiveSettings()->postProcessing.waterEffects ? 1.0f : 0.0f; }
+        void  __stdcall SetWaterEffects(float a_value)
+        {
+            EditableSettings().postProcessing.waterEffects = a_value != 0.0f;
+            PublishSettings();
+            RequestSaveSettings();
+        }
+
         float __stdcall GetContactShadows() { return ActiveSettings()->postProcessing.contactShadows ? 1.0f : 0.0f; }
         void  __stdcall SetContactShadows(float a_value)
         {
@@ -611,6 +619,8 @@ namespace NativeMenuIntegration
                 &SetDistanceHaze, 0.0f, {}, nullptr, nullptr, "$SGS_DISTANCE_HAZE_DESC", &OnSettingCommit);
             AddVanillaSetting("$SGS_EFFECTS_TAB", Type::kSlider, "$SGS_HIGHLIGHT_GLOW", &GetHighlightGlow,
                 &SetHighlightGlow, 0.0f, {}, nullptr, nullptr, "$SGS_HIGHLIGHT_GLOW_DESC", &OnSettingCommit);
+            AddVanillaSetting("$SGS_EFFECTS_TAB", Type::kCheckbox, "$SGS_WATER_EFFECTS", &GetWaterEffects,
+                &SetWaterEffects, 0.0f, {}, nullptr, nullptr, "$SGS_WATER_EFFECTS_DESC", &OnSettingCommit);
 
             // Same static-option-list constraint as every other dropdown -
             // picking up files dropped in after this scan needs a restart.
