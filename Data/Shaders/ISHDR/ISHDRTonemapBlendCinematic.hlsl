@@ -552,13 +552,7 @@ PS_OUTPUT main(PS_INPUT input)
 		return loadingOut;
 	}
 
-	// SGS_Sharpening is 0-1 (1=max); RCAS takes stops of backoff, 0=max.
-	if (SGS_Sharpening > 0.0) {
-		Color = SGS_ApplyFSR1RCAS(TextureColor, TextureColorSampler, scaledUV,
-			float2(SCREEN_INV_WIDTH, SCREEN_INV_HEIGHT), Color, (1.0 - SGS_Sharpening) * 4.0);
-	}
-
-	// After RCAS, which needs unblurred input.
+	// Before RCAS, so moving and still pixels get the same sharpening.
 	if (SGS_MotionBlurAmount > 0.0) {
 		Color = SGS_ApplyMotionBlurPerObject(TextureColor, TextureColorSampler, TextureMotionVector,
 			TextureColorSampler, TextureDepth, TextureColorSampler, texCoord,
@@ -566,6 +560,12 @@ PS_OUTPUT main(PS_INPUT input)
 			float2(DynamicRes_InvWidthX_InvHeightY_WidthClampZ_HeightClampW.z,
 				DynamicRes_WidthX_HeightY_PreviousWidthZ_PreviousHeightW.y),
 			float4(Color, 1.0), SGS_CameraNear, SGS_CameraFar).rgb;
+	}
+
+	// SGS_Sharpening is 0-1 (1=max); RCAS takes stops of backoff, 0=max.
+	if (SGS_Sharpening > 0.0) {
+		Color = SGS_ApplyFSR1RCAS(TextureColor, TextureColorSampler, scaledUV,
+			float2(SCREEN_INV_WIDTH, SCREEN_INV_HEIGHT), Color, (1.0 - SGS_Sharpening) * 4.0);
 	}
 
 #ifndef VR
