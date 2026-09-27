@@ -6,6 +6,29 @@
 #ifndef SIMPLEGRAPHICSSUITE_FSR1_HLSLI
 #define SIMPLEGRAPHICSSUITE_FSR1_HLSLI
 
+// Display-referred input for FSR1: AMD's FsrSrtm, then gamma 2.0.
+float3 SGS_FsrEncode(float3 c)
+{
+	c = max(c, 0.0);
+	return sqrt(c * rcp(max(max(c.r, c.g), c.b) + 1.0));
+}
+
+float3 SGS_FsrDecode(float3 c)
+{
+	c *= c;
+	return c * rcp(max(1.0 / 32768.0, 1.0 - max(max(c.r, c.g), c.b)));
+}
+
+void SGS_FsrEncode4(inout float4 a_r, inout float4 a_g, inout float4 a_b)
+{
+	[unroll] for (int i = 0; i < 4; ++i) {
+		float3 c = SGS_FsrEncode(float3(a_r[i], a_g[i], a_b[i]));
+		a_r[i] = c.r;
+		a_g[i] = c.g;
+		a_b[i] = c.b;
+	}
+}
+
 // One tap of the 12-tap EASU kernel: rotates the tap offset into the local
 // edge direction, weights it by an approximated Lanczos2 window, and
 // accumulates.
@@ -108,6 +131,10 @@ float3 SGS_ApplyFSR1EASU(Texture2D<float4> a_tex, SamplerState a_pointSampler, f
 	float4 zzonR = a_tex.GatherRed(a_pointSampler, p3);
 	float4 zzonG = a_tex.GatherGreen(a_pointSampler, p3);
 	float4 zzonB = a_tex.GatherBlue(a_pointSampler, p3);
+	SGS_FsrEncode4(bczzR, bczzG, bczzB);
+	SGS_FsrEncode4(ijfeR, ijfeG, ijfeB);
+	SGS_FsrEncode4(klhgR, klhgG, klhgB);
+	SGS_FsrEncode4(zzonR, zzonG, zzonB);
 
 	// Component extraction below is copied as-is from FsrEasuF, not
 	// re-derived - it's paired with the exact p0/p1/p2/p3 positions above.
@@ -163,20 +190,7 @@ float3 SGS_ApplyFSR1EASU(Texture2D<float4> a_tex, SamplerState a_pointSampler, f
 	SGS_FsrEasuTap(aC, aW, float2(1.0, 2.0) - pp, dir, len2, lob, clp, float3(zzonR.z, zzonG.z, zzonB.z));    // o
 	SGS_FsrEasuTap(aC, aW, float2(0.0, 2.0) - pp, dir, len2, lob, clp, float3(zzonR.w, zzonG.w, zzonB.w));    // n
 
-	return min(max4, max(min4, aC * rcp(aW)));
-}
-
-// Display-referred input for FSR1: AMD's FsrSrtm, then gamma 2.0.
-float3 SGS_FsrEncode(float3 c)
-{
-	c = max(c, 0.0);
-	return sqrt(c * rcp(max(max(c.r, c.g), c.b) + 1.0));
-}
-
-float3 SGS_FsrDecode(float3 c)
-{
-	c *= c;
-	return c * rcp(max(1.0 / 32768.0, 1.0 - max(max(c.r, c.g), c.b)));
+	return SGS_FsrDecode(min(max4, max(min4, aC * rcp(aW))));
 }
 
 // RCAS - AMD's refinement of CAS: solves more exactly for the maximum
