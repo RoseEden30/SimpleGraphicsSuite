@@ -104,7 +104,9 @@ namespace PostProcessing
             return { -worldDir.x, -worldDir.y, -worldDir.z };
         }
 
-        bool g_motionBlurSuppressedByMenu = false;
+        bool g_motionBlurSuppressed = false;
+        // Motion vectors are only written while the engine's TAA flag is on.
+        bool g_motionVectorsValid = false;
         bool g_loadingScreenApplied = false;
 
         // Cached once per frame from OnPrePresent.
@@ -315,7 +317,7 @@ namespace PostProcessing
             dst->contrast = postProcessing.contrast;
             dst->saturation = postProcessing.saturation;
             dst->bloomIntensity = postProcessing.bloomIntensity;
-            dst->motionBlurAmount = g_motionBlurSuppressedByMenu ? 0.0f : postProcessing.motionBlurStrength;
+            dst->motionBlurAmount = g_motionBlurSuppressed ? 0.0f : postProcessing.motionBlurStrength;
             dst->upscalingEnabled = Upscaling::IsActive(a_settings) ? 1.0f : 0.0f;
             dst->lutStrength = LUT::CurrentSRV() ? postProcessing.lutStrength : 0.0f;
             dst->lutSize = static_cast<float>(LUT::CurrentSize());
@@ -575,12 +577,13 @@ namespace PostProcessing
 
                 // Not while a menu pauses the game, the map and wait menu would smear.
                 {
-                    if (g_pausedByMenu != g_motionBlurSuppressedByMenu) {
-                        g_motionBlurSuppressedByMenu = g_pausedByMenu;
+                    const bool suppressed = g_pausedByMenu || !g_motionVectorsValid;
+                    if (suppressed != g_motionBlurSuppressed) {
+                        g_motionBlurSuppressed = suppressed;
                         UpdateSettingsBuffer(settings);
                     }
 
-                    if (settings.masterEnabled && settings.postProcessing.motionBlurStrength > 0.0f && !g_pausedByMenu) {
+                    if (settings.masterEnabled && settings.postProcessing.motionBlurStrength > 0.0f && !suppressed) {
                         auto* motionSRV = reinterpret_cast<REX::W32::ID3D11ShaderResourceView*>(
                             runtimeData.renderTargets[RE::RENDER_TARGETS::kMOTION_VECTOR].SRV);
                         runtimeData.context->PSSetShaderResources(16, 1, &motionSRV);
@@ -685,6 +688,7 @@ namespace PostProcessing
         {
             // DLAA already resolved kMAIN, skip the vanilla TAA pass in this chain.
             auto* taa = RE::BSGraphics::TAAState::GetSingleton();
+            g_motionVectorsValid = taa && taa->IsTAAEnabled();
             if (!ApplyDLSS() || !taa || !taa->inner) {
                 g_originalMainPostProcessing(a_this, a3, a_target, a4, a5);
                 return;

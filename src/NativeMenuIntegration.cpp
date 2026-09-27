@@ -104,6 +104,11 @@ namespace NativeMenuIntegration
             PublishSettings();
             RequestSaveSettings();
         }
+        bool __stdcall IsMotionBlurEnabled()
+        {
+            const auto& aa = ActiveSettings()->antiAliasing;
+            return aa.enabled && (aa.method == 0 || aa.method == 2);
+        }
         float __stdcall GetVignetteSneakOnly() { return ActiveSettings()->postProcessing.vignetteSneakOnly ? 1.0f : 0.0f; }
         void  __stdcall SetVignetteSneakOnly(float a_value)
         {
@@ -520,7 +525,7 @@ namespace NativeMenuIntegration
 
         if (postProcessing) {
             AddVanillaSetting("Display", Type::kSlider, "$SGS_MOTION_BLUR", &GetMotionBlurStrength,
-                &SetMotionBlurStrength, 0.0f, {}, nullptr, nullptr, "$SGS_MOTION_BLUR_DESC", &OnSettingCommit);
+                &SetMotionBlurStrength, 0.0f, {}, &IsMotionBlurEnabled, nullptr, "$SGS_MOTION_BLUR_DESC", &OnSettingCommit);
             AddVanillaSetting("Display", Type::kSlider, "$SGS_VIGNETTE", &GetVignette, &SetVignette, 0.0f, {}, nullptr,
                 nullptr, "$SGS_VIGNETTE_DESC", &OnSettingCommit);
             AddVanillaSetting("Display", Type::kCheckbox, "$SGS_VIGNETTE_SNEAK_ONLY", &GetVignetteSneakOnly,

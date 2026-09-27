@@ -91,10 +91,6 @@ namespace AntiAliasing
 
             const bool activeModule = settings->masterEnabled && config.enabled;
 
-            // Motion vectors are only written while TAA is on.
-            const bool motionBlurNeedsTAA =
-                settings->masterEnabled && settings->postProcessing.motionBlurStrength > 0.0f;
-
             if (settings->masterEnabled) {
                 if (!g_controllingNativeAA) {
                     g_originalTaaEnabled = taaState && taaState->IsTAAEnabled();
@@ -103,8 +99,7 @@ namespace AntiAliasing
                 }
                 // The flag gates the whole temporal mode (jitter, motion vectors), so DLAA needs it too.
                 if (taaState && taaState->inner)
-                    taaState->inner->taaEnabled =
-                        motionBlurNeedsTAA || (config.enabled && (config.method == 0 || config.method == 2));
+                    taaState->inner->taaEnabled = config.enabled && (config.method == 0 || config.method == 2);
                 if (fxaa)
                     fxaa->active = config.enabled && config.method == 1;
             } else if (g_controllingNativeAA) {
