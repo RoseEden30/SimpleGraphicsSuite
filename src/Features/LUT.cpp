@@ -1,5 +1,6 @@
 #include "LUT.h"
 
+#include <DirectXPackedVector.h>
 #include <cctype>
 #include <d3d11.h>
 #include <fstream>
@@ -35,14 +36,14 @@ namespace LUT
         }
 
         // .cube data is R-fastest, already Texture3D layout. Only the 0-1 domain is supported.
-        bool ParseCube(const std::filesystem::path& a_path, std::uint32_t& a_outSize, std::vector<std::uint8_t>& a_outData)
+        bool ParseCube(const std::filesystem::path& a_path, std::uint32_t& a_outSize, std::vector<std::uint16_t>& a_outData)
         {
             std::ifstream file(a_path);
             if (!file)
                 return false;
 
             std::uint32_t              size = 0;
-            std::vector<std::uint8_t> data;
+            std::vector<std::uint16_t> data;
 
             std::string line;
             while (std::getline(file, line)) {
@@ -74,10 +75,11 @@ namespace LUT
                 if (!(iss >> r >> g >> b))
                     continue;
 
-                data.push_back(static_cast<std::uint8_t>(std::clamp(r, 0.0f, 1.0f) * 255.0f + 0.5f));
-                data.push_back(static_cast<std::uint8_t>(std::clamp(g, 0.0f, 1.0f) * 255.0f + 0.5f));
-                data.push_back(static_cast<std::uint8_t>(std::clamp(b, 0.0f, 1.0f) * 255.0f + 0.5f));
-                data.push_back(255);
+                using DirectX::PackedVector::XMConvertFloatToHalf;
+                data.push_back(XMConvertFloatToHalf(std::clamp(r, 0.0f, 1.0f)));
+                data.push_back(XMConvertFloatToHalf(std::clamp(g, 0.0f, 1.0f)));
+                data.push_back(XMConvertFloatToHalf(std::clamp(b, 0.0f, 1.0f)));
+                data.push_back(XMConvertFloatToHalf(1.0f));
             }
 
             if (size == 0 || data.size() != static_cast<std::size_t>(size) * size * size * 4) {
@@ -94,7 +96,7 @@ namespace LUT
         bool Load(const std::filesystem::path& a_path)
         {
             std::uint32_t              size = 0;
-            std::vector<std::uint8_t> data;
+            std::vector<std::uint16_t> data;
             if (!ParseCube(a_path, size, data))
                 return false;
 
@@ -103,14 +105,14 @@ namespace LUT
             D3D11_TEXTURE3D_DESC desc{};
             desc.Width = desc.Height = desc.Depth = size;
             desc.MipLevels = 1;
-            desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+            desc.Format = DXGI_FORMAT_R16G16B16A16_FLOAT;
             desc.Usage = D3D11_USAGE_IMMUTABLE;
             desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 
             D3D11_SUBRESOURCE_DATA initData{};
             initData.pSysMem = data.data();
-            initData.SysMemPitch = size * 4;
-            initData.SysMemSlicePitch = size * size * 4;
+            initData.SysMemPitch = size * 8;
+            initData.SysMemSlicePitch = size * size * 8;
 
             ID3D11Texture3D* texture = nullptr;
             if (FAILED(device->CreateTexture3D(&desc, &initData, &texture))) {
