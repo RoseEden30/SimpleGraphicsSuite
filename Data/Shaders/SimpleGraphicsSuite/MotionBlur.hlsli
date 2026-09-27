@@ -1,6 +1,4 @@
-// Per-object motion blur: reads the engine's own TAA motion vector buffer -
-// includes actor/object animation, not just camera movement, since that's
-// exactly what the engine needs it for.
+// Per-object motion blur from the engine's TAA motion vectors.
 #ifndef SIMPLEGRAPHICSSUITE_MOTIONBLUR_HLSLI
 #define SIMPLEGRAPHICSSUITE_MOTIONBLUR_HLSLI
 
@@ -22,8 +20,7 @@ float4 SGS_ApplyMotionBlurPerObject(
 	Texture2D<float4> a_depthTexture, SamplerState a_depthSampler,
 	float2 a_uv, float2 a_uvScale, float2 a_uvClamp, float4 a_currentColor, float a_near, float a_far)
 {
-	// Color/motion vectors/depth are rendered at Dynamic Resolution's
-	// internal size, not the full output size a_uv is in.
+	// Inputs are at the dynamic resolution size.
 	float2 sampleUV = min(a_uvClamp, max(0.0, a_uvScale * a_uv));
 
 	float2 velocity = a_motionVectorTexture.SampleLevel(a_motionVectorSampler, sampleUV, 0).xy * MOTION_BLUR_AMOUNT;
@@ -46,10 +43,7 @@ float4 SGS_ApplyMotionBlurPerObject(
 		float2 uv = saturate(a_uv + velocity * ((float(i) - 2.5) / 6.0));
 		float2 sampleStepUV = min(a_uvClamp, max(0.0, a_uvScale * uv));
 
-		// A tap from a different surface than the center pixel (e.g. the
-		// background behind a moving character's silhouette) would smear
-		// that surface's color across the character instead of blurring
-		// the character itself - reject/de-weight those taps.
+		// Reject taps from another surface, e.g. background behind a moving character.
 		float weight = 1.0;
 		if (depthValid) {
 			float tapDepth = SGS_MB_LinearDepth(a_depthTexture.SampleLevel(a_depthSampler, sampleStepUV, 0).x, a_near, a_far);

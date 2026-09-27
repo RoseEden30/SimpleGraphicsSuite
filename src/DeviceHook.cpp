@@ -47,11 +47,7 @@ namespace DeviceHook
             if (SUCCEEDED(result)) {
                 logger::info("DeviceHook: D3D11 device and swap chain created");
 
-                // Manual-hooking mode needs both interfaces swapped for
-                // Streamline's proxies before anyone touches them, or its
-                // per-frame bookkeeping never runs. slSetD3DDevice then takes
-                // the upgraded device. DLAA is the only caller, so a mod owning
-                // anti-aliasing owns the interposer too.
+                // Both interfaces must be swapped for Streamline's proxies before anything uses them.
                 if (a_device && *a_device && !IsNvidia(*a_device)) {
                     Streamline::Skip();
                     logger::info("DeviceHook: not an NVIDIA adapter, Streamline not loaded");

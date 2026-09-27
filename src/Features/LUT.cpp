@@ -34,10 +34,7 @@ namespace LUT
             g_loadedName.clear();
         }
 
-        // Standard .cube: "LUT_3D_SIZE N" then N^3 "R G B" triplets in
-        // R-fastest order, which is already a Texture3D's expected layout.
-        // TITLE/DOMAIN_MIN/MAX are skipped - only the plain 0-1 domain is
-        // supported.
+        // .cube data is R-fastest, already Texture3D layout. Only the 0-1 domain is supported.
         bool ParseCube(const std::filesystem::path& a_path, std::uint32_t& a_outSize, std::vector<std::uint8_t>& a_outData)
         {
             std::ifstream file(a_path);

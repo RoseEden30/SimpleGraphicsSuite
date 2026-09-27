@@ -9,17 +9,14 @@ namespace AntiAliasing
 {
     namespace
     {
-        // Only the linear filter sampler (index 3) gets a modified MipLODBias;
-        // the others are left pointing at the game's own state.
+        // Only the linear filter sampler gets the bias.
         RE::BSGraphics::SamplerStates g_backup{};
         REX::W32::ID3D11SamplerState* g_modified[RE::BSGraphics::SamplerStates::kAddressModes]{};
 
         bool  g_backedUp = false;
         bool  g_biasApplied = false;
         float g_appliedBias = 0.0f;
-        // While the module is active, our method dropdown owns TAA/FXAA
-        // outright (see Update()) - these hold what they were before we
-        // took over, so we can hand them back untouched once disabled.
+        // The game's own TAA/FXAA state, restored when the suite is disabled.
         bool g_controllingNativeAA = false;
         bool g_originalTaaEnabled = false;
         bool g_originalFxaaActive = false;
@@ -94,9 +91,7 @@ namespace AntiAliasing
 
             const bool activeModule = settings->masterEnabled && config.enabled;
 
-            // Motion blur needs the engine's motion vector buffer, which only
-            // stays valid while TAA is active - force it on even if Anti-
-            // aliasing itself is set to Off or FXAA.
+            // Motion vectors are only written while TAA is on.
             const bool motionBlurNeedsTAA =
                 settings->masterEnabled && settings->postProcessing.motionBlurStrength > 0.0f;
 
@@ -106,9 +101,7 @@ namespace AntiAliasing
                     g_originalFxaaActive = fxaa && fxaa->active;
                     g_controllingNativeAA = true;
                 }
-                // The flag gates the engine's whole temporal mode, not just
-                // its TAA resolve, so DLAA needs it on too. Off means neither
-                // TAA nor FXAA runs - the suite owns both while it is active.
+                // The flag gates the whole temporal mode (jitter, motion vectors), so DLAA needs it too.
                 if (taaState && taaState->inner)
                     taaState->inner->taaEnabled =
                         motionBlurNeedsTAA || (config.enabled && (config.method == 0 || config.method == 2));
@@ -150,10 +143,7 @@ namespace AntiAliasing
             static inline REL::Relocation<decltype(thunk)> func;
         };
 
-        // The engine recomputes its own per-frame jitter at this separate,
-        // later call site - anything written from Main_UpdateViewport above
-        // gets overwritten here otherwise, so DLSS's jitter has to be set
-        // from this exact point instead.
+        // The engine overwrites the jitter here, after Main_UpdateViewport.
         struct Main_UpdateJitter
         {
             static void thunk(RE::BSGraphics::State* a_state)
@@ -176,8 +166,7 @@ namespace AntiAliasing
 
         Main_UpdateViewport::func = SKSE::GetTrampoline().write_call<5>(target, Main_UpdateViewport::thunk);
 
-        // GOG has always been at 0x133; Steam moved there at 1.7.99, was
-        // 0xE2 before (verified against open-shaders' same hook).
+        // GOG is at 0x133, Steam since 1.7.99 too (0xE2 before). Checked against open-shaders.
         const bool             isGOG = !GetModuleHandleW(L"steam_api64.dll");
         const std::uintptr_t   steamOffset = REL::Module::IsAtLeast(REL::Version(1, 7, 99, 0)) ? 0x133 : 0xE2;
         const auto             jitterTarget = RELOCATION_ID(75460, 77245).address() +

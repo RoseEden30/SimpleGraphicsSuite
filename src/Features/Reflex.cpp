@@ -24,8 +24,7 @@ namespace Reflex
         // NVAPI wants one incrementing ID per frame.
         std::atomic<NvU64> g_frameId{ 0 };
 
-        // What was last handed to the driver, to skip identical calls during
-        // a drag and to log only real changes.
+        // Last params sent, to skip identical calls.
         NV_SET_SLEEP_MODE_PARAMS g_appliedParams{};
         bool                     g_everApplied = false;
 
@@ -34,8 +33,7 @@ namespace Reflex
             if (!g_supported || !g_device)
                 return;
 
-            // The global bypass has to reach the driver, not just skip the
-            // per-frame Sleep() call.
+            // The bypass has to reach the driver, not just skip Sleep().
             const bool  active = a_settings.masterEnabled && a_settings.reflex.enabled;
             const auto& config = a_settings.reflex;
 

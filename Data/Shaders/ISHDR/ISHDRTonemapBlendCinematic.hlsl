@@ -83,13 +83,7 @@ SamplerState TextureBloomSampler : register(s0);
 // Past slot 15, outside the engine's state cache.
 Texture3D<float3> LUTTexture : register(t17);
 
-// Bound at runtime by SimpleGraphicsSuite - the engine's own TAA motion vector
-// buffer and scene depth, not part of this technique's original resources.
-// Applied here (post-AO/fog composite) rather than in the SAO composite
-// shaders that used to do this, since blurring there meant averaging in
-// samples of the PRE-composite color, diluting/erasing AO and fog on every
-// pixel a blur tap touched. TextureColor here is already fully composited,
-// so blurring it doesn't have that problem.
+// Bound by SimpleGraphicsSuite: the engine's motion vectors and scene depth.
 Texture2D<float2> TextureMotionVector : register(t16);
 Texture2D<float4> TextureDepth : register(t18);
 
@@ -558,9 +552,7 @@ PS_OUTPUT main(PS_INPUT input)
 		return loadingOut;
 	}
 
-	// Per-object motion blur, sourced from TextureColor. Runs before RCAS -
-	// its neighbor taps read TextureColor directly, so running it after
-	// RCAS diluted every pixel's sharpening with unsharpened samples.
+	// Before RCAS, its taps read the unsharpened TextureColor.
 	if (SGS_MotionBlurAmount > 0.0) {
 		Color = SGS_ApplyMotionBlurPerObject(TextureColor, TextureColorSampler, TextureMotionVector,
 			TextureColorSampler, TextureDepth, TextureColorSampler, texCoord,

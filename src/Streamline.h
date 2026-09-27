@@ -4,14 +4,10 @@
 #include <sl.h>
 #include <sl_dlss.h>
 
-// Thin wrapper around NVIDIA's Streamline interposer, resolved through
-// GetProcAddress so nothing links against it. DLSS goes through Streamline
-// rather than raw NGX for its camera-aware reprojection and its reactive /
-// transparency mask support.
+// NVIDIA Streamline interposer, resolved through GetProcAddress.
 namespace Streamline
 {
-    // Idempotent - loads sl.interposer.dll and calls slInit. Safe to call
-    // repeatedly; does nothing once already attempted.
+    // Loads sl.interposer.dll and calls slInit, once.
     void EnsureInitialized();
 
     // For adapters that can't run DLSS.
@@ -22,9 +18,7 @@ namespace Streamline
     // Per-adapter DLSS capability, set by SetDevice.
     bool IsDLSSSupported();
 
-    // Replaces a raw D3D11/DXGI interface pointer with Streamline's proxy in
-    // place. Manual-hooking mode needs it to observe Present. Call it right
-    // after the interface is created, before anything else uses it.
+    // Swaps a D3D11/DXGI interface for Streamline's proxy, right after creation.
     sl::Result UpgradeInterface(void** a_interface);
 
     // Must be called once, immediately after the D3D11 device is created.

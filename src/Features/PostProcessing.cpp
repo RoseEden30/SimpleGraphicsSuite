@@ -28,9 +28,7 @@ namespace PostProcessing
 {
     namespace
     {
-        // Mirrors SimpleGraphicsSuiteSettings in Settings.hlsli. Everything
-        // continuous lives here so dragging a slider never recompiles a
-        // shader; only screen size stays a compile-time macro.
+        // Mirrors SimpleGraphicsSuiteSettings in Settings.hlsli.
         struct SettingsCB
         {
             float sharpening;
@@ -68,7 +66,7 @@ namespace PostProcessing
         };
         static_assert(sizeof(SettingsCB) == 128);
 
-        // Matches SGS_CSLightData (Buffer<float4> at t10) in ContactShadows.hlsli.
+        // Matches SGS_CSLightData in ContactShadows.hlsli.
         constexpr std::size_t kMaxContactLights = 4;
         struct ContactLightsCB
         {
@@ -109,8 +107,7 @@ namespace PostProcessing
         bool g_motionBlurSuppressedByMenu = false;
         bool g_loadingScreenApplied = false;
 
-        // Cached once per frame from OnPrePresent - avoids repeated
-        // IsMenuOpen queries on every SetupTechnique call.
+        // Cached once per frame from OnPrePresent.
         bool g_pausedByMenu = false;
         bool g_loadingMenuOpen = false;
 
@@ -121,8 +118,6 @@ namespace PostProcessing
             g_loadingMenuOpen = ui && ui->IsMenuOpen(RE::LoadingMenu::MENU_NAME);
         }
 
-        // How long a full 0<->target vignette transition takes, fading
-        // rather than snapping instantly when sneak state changes.
         constexpr float                      kVignetteFadeSeconds = 0.35f;
         float                                 g_vignetteCurrent = 0.0f;
         std::chrono::steady_clock::time_point g_vignetteLastTick = std::chrono::steady_clock::now();
@@ -135,9 +130,7 @@ namespace PostProcessing
             return std::fmod(seconds, 1000.0f);
         }
 
-        // Moves g_vignetteCurrent toward a_target at a constant rate,
-        // independent of frame rate. Returns true while still transitioning
-        // - the caller only needs to touch the GPU buffer in that case.
+        // Returns true while still transitioning.
         bool StepVignette(float a_target)
         {
             const auto  now = std::chrono::steady_clock::now();
@@ -328,9 +321,6 @@ namespace PostProcessing
             dst->lutSize = static_cast<float>(LUT::CurrentSize());
             dst->tonemapMethod = static_cast<float>(postProcessing.tonemapMethod);
             dst->tonemapExposureOffset = postProcessing.tonemapExposureOffset;
-            // Sneak-only mode fades g_vignetteCurrent toward the target
-            // instead of snapping - see StepVignette, driven per-frame from
-            // Hook_SetupTechnique.
             dst->vignette = postProcessing.vignetteSneakOnly ? g_vignetteCurrent : postProcessing.vignette;
             dst->postProcessingEnabled = postProcessing.enabled ? 1.0f : 0.0f;
             dst->filmGrain = postProcessing.filmGrain;
@@ -340,7 +330,6 @@ namespace PostProcessing
             dst->cameraNear = RE::BSGraphics::CameraNear();
             dst->cameraFar = RE::BSGraphics::CameraFar();
             dst->highlightGlow = postProcessing.highlightGlow;
-            // Fixed intensity behind the on/off toggle - kept subtle on purpose.
             constexpr float kContactShadowStrength = 0.3f;
             dst->contactShadows = postProcessing.contactShadows ? kContactShadowStrength : 0.0f;
 
@@ -481,8 +470,7 @@ namespace PostProcessing
             return RenderPass::CompilePixelShader(a_path, macros);
         }
 
-        // Files are named <technique ID in hex>.ps.hlsl, the layout doodlum
-        // ships Vanilla HDR's shaders in.
+        // Files are named <technique ID in hex>.ps.hlsl, as in Vanilla HDR.
         std::unordered_map<std::uint32_t, std::filesystem::path> ScanShaderFolder(const std::filesystem::path& a_dir)
         {
             std::unordered_map<std::uint32_t, std::filesystem::path> found;
@@ -511,27 +499,23 @@ namespace PostProcessing
 
         std::vector<ReplacedShader> g_replaced;
 
-        // The tonemap techniques - our own passes run just before this draw.
         constexpr std::array kTonemapShaderNames = { "ISHDRTonemapBlendCinematic"sv, "ISHDRTonemapBlendCinematicFade"sv };
 
         using SetupTechnique_t = bool (*)(RE::BSShader*, std::uint32_t);
         std::unordered_map<void*, SetupTechnique_t> g_patchedVtables;
 
-        // Runs before the vanilla chain (bloom, SAO, tonemap) starts, since
-        // those read kMAIN directly and need the resolved, de-jittered result.
-        // Substituting a texture at tonemap time instead leaves every earlier
-        // pass on the jittered buffer, which shimmers.
-        void ApplyDLSS()
+        // Before the vanilla chain, which reads kMAIN and needs the de-jittered result.
+        bool ApplyDLSS()
         {
             const auto settings = ActiveSettings();
             if (!settings->masterEnabled || !settings->antiAliasing.enabled || settings->antiAliasing.method != 2 ||
                 g_loadingMenuOpen)
-                return;
+                return false;
 
             auto& main = RE::BSGraphics::Renderer::GetSingleton()->GetRuntimeData().renderTargets[RE::RENDER_TARGETS::kMAIN];
             if (!main.texture) {
                 DLSS::SetLastFailureReason("kMAIN render target has no texture yet");
-                return;
+                return false;
             }
 
             const auto screenSize = RE::BSGraphics::Renderer::GetScreenSize();
@@ -551,10 +535,10 @@ namespace PostProcessing
                     loggedFailureOnce = true;
                 }
             }
+            return applied;
         }
 
-        // Runs on every technique draw for a patched shader class, so it has
-        // to stay cheap: a handful of string compares, no allocation.
+        // Runs on every technique draw, keep it cheap.
         bool Hook_SetupTechnique(RE::BSShader* a_this, std::uint32_t a_technique)
         {
             if (g_reapplyPending.exchange(false)) {
@@ -576,8 +560,7 @@ namespace PostProcessing
                 std::ranges::find(kTonemapShaderNames, std::string_view{ a_this->fxpFilename }) !=
                     kTonemapShaderNames.end();
             if (isTonemapShader) {
-                // One snapshot for the whole draw - every ActiveSettings()
-                // load locks, and this runs per technique setup.
+                // ActiveSettings() locks, take one snapshot.
                 const auto  settingsPtr = ActiveSettings();
                 const auto& settings = *settingsPtr;
 
@@ -590,10 +573,7 @@ namespace PostProcessing
                     runtimeData.context->PSSetShaderResources(17, 1, &lutSRV);
                 }
 
-                // Motion vector for per-object motion blur, see MotionBlur.hlsli.
-                // Suppressed while a menu has the game paused: the map and the
-                // wait menu move the scene far more than gameplay does, which
-                // reads as smearing.
+                // Not while a menu pauses the game, the map and wait menu would smear.
                 {
                     if (g_pausedByMenu != g_motionBlurSuppressedByMenu) {
                         g_motionBlurSuppressedByMenu = g_pausedByMenu;
@@ -622,9 +602,6 @@ namespace PostProcessing
                         runtimeData.context->PSSetShaderResources(19, 1, &g_contactLightsSRV);
                 }
 
-                // Fades in and out on a sneak/stand transition instead of
-                // snapping. The settings buffer is only remapped while
-                // actually transitioning.
                 if (settings.postProcessing.vignetteSneakOnly) {
                     const float target = IsPlayerSneaking() ? settings.postProcessing.vignette : 0.0f;
                     if (StepVignette(target))
@@ -683,8 +660,7 @@ namespace PostProcessing
                 ++replaced;
             }
 
-            // Every one of our shaders reads the settings cbuffer, so all of
-            // them need the SetupTechnique hook, not just the motion blur ones.
+            // Every replaced shader reads the settings cbuffer.
             PatchSetupTechnique(a_shader);
 
             if (replaced > 0)
@@ -701,18 +677,23 @@ namespace PostProcessing
             ReplaceShaders(*a_shader);
         }
 
-        // The call site patched below sits inside the engine's own
-        // post-processing entry point (bloom, SAO, tonemap all run inside
-        // it) - running DLSS here, before that call, matches Community
-        // Shaders' own upscale ordering. See ApplyDLSS.
         using MainPostProcessing_t = void (*)(RE::ImageSpaceManager*, std::uint32_t, RE::RENDER_TARGET, void*, bool);
         MainPostProcessing_t g_originalMainPostProcessing = nullptr;
 
         void Hook_MainPostProcessing(
             RE::ImageSpaceManager* a_this, std::uint32_t a3, RE::RENDER_TARGET a_target, void* a4, bool a5)
         {
-            ApplyDLSS();
+            // DLAA already resolved kMAIN, skip the vanilla TAA pass in this chain.
+            auto* taa = RE::BSGraphics::TAAState::GetSingleton();
+            if (!ApplyDLSS() || !taa || !taa->inner) {
+                g_originalMainPostProcessing(a_this, a3, a_target, a4, a5);
+                return;
+            }
+
+            const bool taaEnabled = taa->inner->taaEnabled;
+            taa->inner->taaEnabled = false;
             g_originalMainPostProcessing(a_this, a3, a_target, a4, a5);
+            taa->inner->taaEnabled = taaEnabled;
         }
 
         constexpr std::uintptr_t kLoadShadersEntrySize = 9;
@@ -745,9 +726,7 @@ namespace PostProcessing
             return a_entry + kLoadShadersEntrySize + displacement;
         }
 
-        // Any effect living in the replaced shader has to keep it bound, not
-        // just the grading toggle. Upscaling counts: its FSR1 EASU
-        // reconstruction is in that same shader.
+        // FSR1 EASU lives in the replaced shader too.
         bool NeedsReplacedShader(const Settings& a_settings)
         {
             if (!a_settings.masterEnabled)
@@ -778,10 +757,7 @@ namespace PostProcessing
 
     bool IsInstalled() { return !g_patchedVtables.empty(); }
 
-    // Recompiles every replaced shader straight from its .hlsl/.hlsli files
-    // on disk - a dev convenience for iterating on the shader source without
-    // restarting the game. Not used by the normal settings-change path
-    // anymore, since those live in the settings buffer instead.
+    // Dev convenience: recompiles the replaced shaders from disk.
     void ReloadShadersFromDisk()
     {
         const bool  bindNow = NeedsReplacedShader(*ActiveSettings());
@@ -823,9 +799,7 @@ namespace PostProcessing
             logger::error("Post-processing: unexpected BSShader::LoadShaders entry, shaders won't be replaced");
         }
 
-        // Call site inside the engine's own post-processing entry point -
-        // verified against alandtse's open-shaders (their Main_PostProcessing,
-        // same RelocationID), VR offset included.
+        // Checked against open-shaders' Main_PostProcessing, VR included.
         const auto postProcessingCall =
             RELOCATION_ID(100430, 107148).address() + REL::Relocate<std::uintptr_t>(0x1F0, 0x1E7, 0x206);
         g_originalMainPostProcessing =
