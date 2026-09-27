@@ -3,7 +3,7 @@
 
 cmake_minimum_required(VERSION 3.21)
 
-project(SimpleGraphicsSuite VERSION 1.2.8 LANGUAGES CXX)
+project(SimpleGraphicsSuite VERSION 1.2.9 LANGUAGES CXX)
 
 set(PLUGIN_AUTHOR "RoseEden" CACHE STRING "Author name baked into the plugin declaration")
 

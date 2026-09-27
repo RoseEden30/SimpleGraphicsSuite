@@ -166,6 +166,19 @@ float3 SGS_ApplyFSR1EASU(Texture2D<float4> a_tex, SamplerState a_pointSampler, f
 	return min(max4, max(min4, aC * rcp(aW)));
 }
 
+// Display-referred input for FSR1: AMD's FsrSrtm, then gamma 2.0.
+float3 SGS_FsrEncode(float3 c)
+{
+	c = max(c, 0.0);
+	return sqrt(c * rcp(max(max(c.r, c.g), c.b) + 1.0));
+}
+
+float3 SGS_FsrDecode(float3 c)
+{
+	c *= c;
+	return c * rcp(max(1.0 / 32768.0, 1.0 - max(max(c.r, c.g), c.b)));
+}
+
 // RCAS - AMD's refinement of CAS: solves more exactly for the maximum
 // sharpness before clipping, and backs off on what its noise detector
 // thinks is grain (CAS has no such check, so it over-sharpens noise).
@@ -175,11 +188,11 @@ float3 SGS_ApplyFSR1EASU(Texture2D<float4> a_tex, SamplerState a_pointSampler, f
 float3 SGS_ApplyFSR1RCAS(Texture2D<float4> a_tex, SamplerState a_pointSampler, float2 a_uv, float2 a_texelSize,
 	float3 a_centerColor, float a_sharpness)
 {
-	float3 b = a_tex.SampleLevel(a_pointSampler, a_uv + float2(0.0, -a_texelSize.y), 0).rgb;
-	float3 d = a_tex.SampleLevel(a_pointSampler, a_uv + float2(-a_texelSize.x, 0.0), 0).rgb;
-	float3 e = a_centerColor;
-	float3 f = a_tex.SampleLevel(a_pointSampler, a_uv + float2(a_texelSize.x, 0.0), 0).rgb;
-	float3 h = a_tex.SampleLevel(a_pointSampler, a_uv + float2(0.0, a_texelSize.y), 0).rgb;
+	float3 b = SGS_FsrEncode(a_tex.SampleLevel(a_pointSampler, a_uv + float2(0.0, -a_texelSize.y), 0).rgb);
+	float3 d = SGS_FsrEncode(a_tex.SampleLevel(a_pointSampler, a_uv + float2(-a_texelSize.x, 0.0), 0).rgb);
+	float3 e = SGS_FsrEncode(a_centerColor);
+	float3 f = SGS_FsrEncode(a_tex.SampleLevel(a_pointSampler, a_uv + float2(a_texelSize.x, 0.0), 0).rgb);
+	float3 h = SGS_FsrEncode(a_tex.SampleLevel(a_pointSampler, a_uv + float2(0.0, a_texelSize.y), 0).rgb);
 
 	float bL = b.b * 0.5 + (b.r * 0.5 + b.g);
 	float dL = d.b * 0.5 + (d.r * 0.5 + d.g);
@@ -205,7 +218,7 @@ float3 SGS_ApplyFSR1RCAS(Texture2D<float4> a_tex, SamplerState a_pointSampler, f
 	lobe *= nz;
 
 	float rcpL = rcp(4.0 * lobe + 1.0);
-	return (lobe * b + lobe * d + lobe * h + lobe * f + e) * rcpL;
+	return SGS_FsrDecode((lobe * b + lobe * d + lobe * h + lobe * f + e) * rcpL);
 }
 
 #endif
