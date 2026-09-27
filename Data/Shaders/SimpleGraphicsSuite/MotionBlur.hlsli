@@ -25,9 +25,9 @@ float4 SGS_ApplyMotionBlurPerObject(
 
 	float2 velocity = a_motionVectorTexture.SampleLevel(a_motionVectorSampler, sampleUV, 0).xy * MOTION_BLUR_AMOUNT;
 
-	// No blur under half a pixel (McGuire et al. 2012).
-	float2 velocityPixels = velocity / float2(SCREEN_INV_WIDTH, SCREEN_INV_HEIGHT);
-	if (dot(velocityPixels, velocityPixels) < 0.25)
+	// No blur under half a pixel (McGuire et al. 2012), fading in up to one so nothing toggles.
+	float speed = length(velocity / float2(SCREEN_INV_WIDTH, SCREEN_INV_HEIGHT));
+	if (speed < 0.5)
 		return a_currentColor;
 
 	const bool depthValid = isfinite(a_near) && isfinite(a_far) && a_near > 0.0 && a_far > a_near;
@@ -52,7 +52,7 @@ float4 SGS_ApplyMotionBlurPerObject(
 		sum += a_colorTexture.SampleLevel(a_colorSampler, sampleStepUV, 0) * weight;
 		weightSum += weight;
 	}
-	return sum / weightSum;
+	return lerp(a_currentColor, sum / weightSum, saturate(2.0 * speed - 1.0));
 }
 
 #endif
