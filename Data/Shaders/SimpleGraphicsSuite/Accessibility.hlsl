@@ -9,49 +9,49 @@ cbuffer AccessibilitySettings : register(b0)
 	float SGS_ColorblindMode;      // 0=Off, 1=Protanopia, 2=Deuteranopia, 3=Tritanopia, 4=Grayscale (debug)
 	float SGS_ColorblindStrength;
 	float SGS_HighContrastStrength;  // 0.0-1.0, 0 = off
-	float SGS_Reserved1;
+	float SGS_InputLinear;  // sRGB or float back buffer
 };
 
-// Daltonization: simulate the selected color vision deficiency, then shift
-// the resulting error (what that simulation drops) into the blue/red
-// channels the deficiency doesn't affect, so hues that were confusable stay
-// distinguishable. Simulation matrices are the standard simplified RGB set
-// (Machado/Oliveira/Fernandes 2009, as commonly reproduced); the error-shift
-// matrix is the standard Daltonize correction (Fidaner/Lin/Ozguven 2005).
+float3 SRGBToLinear(float3 c)
+{
+	return c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4);
+}
+
+float3 LinearToSRGB(float3 c)
+{
+	c = max(c, 0.0);
+	return c <= 0.0031308 ? c * 12.92 : 1.055 * pow(c, 1.0 / 2.4) - 0.055;
+}
+
+// Linear RGB in and out. Machado, Oliveira and Fernandes 2009 simulation at
+// severity 1.0, then the Fidaner, Lin and Ozguven 2005 error shift.
 float3 Daltonize(float3 color, float mode, float strength)
 {
-	if (mode < 0.5)
-		return color;
-
-	// Grayscale debug mode - not a real deficiency, just an obvious way to
-	// confirm this pass covers the whole frame, HUD/menus included.
-	if (mode > 3.5) {
-		float luma = dot(color, float3(0.2125, 0.7154, 0.0721));
-		return lerp(color, luma.xxx, strength);
-	}
+	// Grayscale, a debug mode.
+	if (mode > 3.5)
+		return lerp(color, dot(color, float3(0.2126, 0.7152, 0.0722)).xxx, strength);
 
 	float3x3 sim;
 	if (mode < 1.5)       // Protanopia
-		sim = float3x3(0.567, 0.433, 0.000,
-		               0.558, 0.442, 0.000,
-		               0.000, 0.242, 0.758);
+		sim = float3x3(0.152286, 1.052583, -0.204868,
+		               0.114503, 0.786281, 0.099216,
+		               -0.003882, -0.048116, 1.051998);
 	else if (mode < 2.5)  // Deuteranopia
-		sim = float3x3(0.625, 0.375, 0.000,
-		               0.700, 0.300, 0.000,
-		               0.000, 0.300, 0.700);
+		sim = float3x3(0.367322, 0.860646, -0.227968,
+		               0.280085, 0.672501, 0.047413,
+		               -0.011820, 0.042940, 0.968881);
 	else                  // Tritanopia
-		sim = float3x3(0.950, 0.050, 0.000,
-		               0.000, 0.433, 0.567,
-		               0.000, 0.475, 0.525);
+		sim = float3x3(1.255528, -0.076749, -0.178779,
+		               -0.078411, 0.930809, 0.147602,
+		               0.004733, 0.691367, 0.303900);
 
-	float3 simulated = mul(sim, color);
-	float3 error = color - simulated;
+	float3 error = color - mul(sim, color);
 
 	static const float3x3 shift = float3x3(0.0, 0.0, 0.0,
 	                                        0.7, 1.0, 0.0,
 	                                        0.7, 0.0, 1.0);
-	float3 corrected = color + mul(shift, error);
-	return lerp(color, saturate(corrected), strength);
+	float3 corrected = max(color + mul(shift, error), 0.0);
+	return lerp(color, corrected, strength);
 }
 
 // Unsharp mask: boosts local contrast around edges (menus, HUD text, object
@@ -79,6 +79,11 @@ float4 main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target0
 {
 	float3 color = TextureColor.Sample(TextureColorSampler, uv).rgb;
 	color = HighContrast(color, uv, SGS_HighContrastStrength);
-	color = Daltonize(color, SGS_ColorblindMode, SGS_ColorblindStrength);
+	if (SGS_ColorblindMode > 0.5) {
+		if (SGS_InputLinear > 0.5)
+			color = Daltonize(color, SGS_ColorblindMode, SGS_ColorblindStrength);
+		else
+			color = LinearToSRGB(Daltonize(SRGBToLinear(saturate(color)), SGS_ColorblindMode, SGS_ColorblindStrength));
+	}
 	return float4(color, 1.0);
 }

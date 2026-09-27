@@ -13,7 +13,7 @@ namespace Accessibility
             float colorblindMode;
             float colorblindStrength;
             float highContrastStrength;
-            float reserved1;
+            float inputLinear;
         };
         static_assert(sizeof(SettingsCB) == 16);
 
@@ -65,6 +65,20 @@ namespace Accessibility
                 logger::warn("Accessibility: shader failed to compile - filters disabled");
 
             return g_accessibilityPS && g_sampler && g_settingsBuffer;
+        }
+
+        bool ReadsBackLinear(REX::W32::DXGI_FORMAT a_format)
+        {
+            switch (a_format) {
+            case REX::W32::DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+            case REX::W32::DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
+            case REX::W32::DXGI_FORMAT_B8G8R8X8_UNORM_SRGB:
+            case REX::W32::DXGI_FORMAT_R16G16B16A16_FLOAT:
+            case REX::W32::DXGI_FORMAT_R32G32B32A32_FLOAT:
+                return true;
+            default:
+                return false;
+            }
         }
 
         void ReleaseCopyTexture()
@@ -160,6 +174,7 @@ namespace Accessibility
                 dst->colorblindMode = static_cast<float>(access.colorblindMode);
                 dst->colorblindStrength = access.colorblindStrength;
                 dst->highContrastStrength = access.highContrastStrength;
+                dst->inputLinear = ReadsBackLinear(backBufferDesc.format) ? 1.0f : 0.0f;
                 a_context->Unmap(static_cast<REX::W32::ID3D11Resource*>(g_settingsBuffer), 0);
             }
             a_context->PSSetConstantBuffers(0, 1, &g_settingsBuffer);
