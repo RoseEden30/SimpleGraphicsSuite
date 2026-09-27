@@ -82,6 +82,8 @@ namespace PostProcessing
         void ApplyEnabled(bool a_enabled);
 
         std::atomic<bool> g_reapplyPending{ false };
+        std::atomic<bool> g_reloadPending{ false };
+        void              ReloadShaders();
 
         bool IsPlayerSneaking()
         {
@@ -543,6 +545,8 @@ namespace PostProcessing
         // Runs on every technique draw, keep it cheap.
         bool Hook_SetupTechnique(RE::BSShader* a_this, std::uint32_t a_technique)
         {
+            if (g_reloadPending.exchange(false))
+                ReloadShaders();
             if (g_reapplyPending.exchange(false)) {
                 const auto settings = ActiveSettings();
                 UpdateSettingsBuffer(*settings);
@@ -753,6 +757,32 @@ namespace PostProcessing
             for (const auto& shader : g_replaced)
                 shader.entry->shader = a_enabled ? shader.replaced : shader.original;
         }
+
+        void ReloadShaders()
+        {
+            const bool  bindNow = NeedsReplacedShader(*ActiveSettings());
+            std::size_t ok = 0;
+            std::size_t failed = 0;
+
+            for (auto& shader : g_replaced) {
+                auto* recompiled = CompilePixelShader(shader.path);
+                if (!recompiled) {
+                    ++failed;
+                    continue;
+                }
+
+                auto* previous = shader.replaced;
+                shader.replaced = recompiled;
+                if (bindNow)
+                    shader.entry->shader = recompiled;
+                if (previous)
+                    previous->Release();
+                ++ok;
+            }
+
+            logger::info("Post-processing: reloaded {} of {} shader(s) from disk ({} failed)", ok, g_replaced.size(),
+                failed);
+        }
     }
 
     void Reapply() { g_reapplyPending.store(true); }
@@ -761,32 +791,8 @@ namespace PostProcessing
 
     bool IsInstalled() { return !g_patchedVtables.empty(); }
 
-    // Dev convenience: recompiles the replaced shaders from disk.
-    void ReloadShadersFromDisk()
-    {
-        const bool  bindNow = NeedsReplacedShader(*ActiveSettings());
-        std::size_t ok = 0;
-        std::size_t failed = 0;
-
-        for (auto& shader : g_replaced) {
-            auto* recompiled = CompilePixelShader(shader.path);
-            if (!recompiled) {
-                ++failed;
-                continue;
-            }
-
-            auto* previous = shader.replaced;
-            shader.replaced = recompiled;
-            if (bindNow)
-                shader.entry->shader = recompiled;
-            if (previous)
-                previous->Release();
-            ++ok;
-        }
-
-        logger::info("Post-processing: reloaded {} of {} shader(s) from disk ({} failed)", ok, g_replaced.size(),
-            failed);
-    }
+    // Applied on the next draw.
+    void ReloadShadersFromDisk() { g_reloadPending.store(true); }
 
     void InstallHooks()
     {

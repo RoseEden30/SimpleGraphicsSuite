@@ -56,8 +56,12 @@ namespace LUT
                 if (line.starts_with("LUT_3D_SIZE")) {
                     std::istringstream iss(line.substr(std::strlen("LUT_3D_SIZE")));
                     iss >> size;
-                    if (size > 0)
-                        data.reserve(static_cast<std::size_t>(size) * size * size * 4);
+                    // Adobe Cube LUT spec range.
+                    if (size < 2 || size > 256) {
+                        logger::warn("LUT: {} - LUT_3D_SIZE {} out of range (2-256)", a_path.filename().string(), size);
+                        return false;
+                    }
+                    data.reserve(static_cast<std::size_t>(size) * size * size * 4);
                     continue;
                 }
 

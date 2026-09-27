@@ -6,7 +6,7 @@ One DLL, one ini. The plugin runs on its own. If [NativeSystemMenuFramework](htt
 
 ## Modules
 
-- **Anti-aliasing** - TAA, FXAA, or NVIDIA DLAA through Streamline. Mutually exclusive; picking one turns the others off.
+- **Anti-aliasing** - TAA, FXAA, or NVIDIA DLAA through Streamline (not in VR). Mutually exclusive; picking one turns the others off.
 - **Post-processing** - doodlum's Vanilla HDR tonemap with six selectable curves and an exposure offset, FidelityFX RCAS sharpening, exposure/contrast/saturation/bloom intensity, `.cube` LUT color grading, motion blur off the engine's own motion vector buffer, film grain, lens flare, distance haze, highlight glow, screen-space contact shadows, a vignette that can be limited to sneaking, underwater ripples with drips on the lens after surfacing, and rain drops on the lens when out in the rain.
 - **Render scale** - renders the 3D scene below native resolution through the engine's dynamic resolution, then reconstructs with FidelityFX FSR1 (EASU). Ignored under FXAA and DLAA, which both take the resolution back.
 - **Soft shadows** - scales the engine's own shadow softness with scene lighting: soft in dim/overcast light, sharp in direct sun, fixed indoors.

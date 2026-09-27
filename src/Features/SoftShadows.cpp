@@ -107,7 +107,9 @@ namespace SoftShadows
         }
 
         void* original = nullptr;
-        if (!VTablePatch::PatchSlot(player, 0xAD, reinterpret_cast<void*>(&thunk_Update), &original)) {
+        // Actor::Update, per CommonLib.
+        const auto slot = REL::Relocate<std::size_t>(0xAD, 0xAD, 0xAF);
+        if (!VTablePatch::PatchSlot(player, slot, reinterpret_cast<void*>(&thunk_Update), &original)) {
             logger::error("SoftShadows: couldn't hook PlayerCharacter::Update");
             return;
         }

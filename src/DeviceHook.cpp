@@ -48,7 +48,9 @@ namespace DeviceHook
                 logger::info("DeviceHook: D3D11 device and swap chain created");
 
                 // Both interfaces must be swapped for Streamline's proxies before anything uses them.
-                if (a_device && *a_device && !IsNvidia(*a_device)) {
+                if (REL::Module::IsVR()) {
+                    Streamline::Skip();
+                } else if (a_device && *a_device && !IsNvidia(*a_device)) {
                     Streamline::Skip();
                     logger::info("DeviceHook: not an NVIDIA adapter, Streamline not loaded");
                 } else if (!Compatibility::IsSuppressed(Compatibility::kAntiAliasing)) {

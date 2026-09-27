@@ -308,6 +308,12 @@ namespace DLSS
 
     void EnsureInitialized()
     {
+        // VR needs per-eye evaluation.
+        if (REL::Module::IsVR()) {
+            SetLastFailureReason("DLAA isn't supported in VR");
+            return;
+        }
+
         g_device =
             reinterpret_cast<ID3D11Device*>(RE::BSGraphics::Renderer::GetSingleton()->GetRuntimeData().forwarder);
 
@@ -503,6 +509,11 @@ namespace DLSS
         auto& underwaterMask = renderer->GetRuntimeData().renderTargets[RE::RENDER_TARGETS::kUNDERWATER_MASK];
         auto& depth = renderer->GetDepthStencilData().depthStencils[RE::RENDER_TARGETS_DEPTHSTENCIL::kMAIN];
 
+        // Inputs can't be read while bound as outputs.
+        context->OMSetRenderTargets(0, nullptr, nullptr);
+        RE::BSGraphics::RendererShadowState::GetSingleton()->GetRuntimeData().stateUpdateFlags.set(
+            RE::BSGraphics::ShaderFlags::DIRTY_RENDERTARGET);
+
         const auto encoded = EncodeUpscalingTextures(context, reinterpret_cast<ID3D11ShaderResourceView*>(motionVector.SRV),
             reinterpret_cast<ID3D11ShaderResourceView*>(depth.depthSRV), reinterpret_cast<ID3D11ShaderResourceView*>(taaMask.SRV),
             reinterpret_cast<ID3D11ShaderResourceView*>(underwaterMask.SRV), RE::BSGraphics::CameraNear(),
@@ -543,12 +554,7 @@ namespace DLSS
             return false;
         }
 
-        // Copy back into kMAIN rather than handing out a separate SRV: the
-        // rest of the chain reads kMAIN directly. Marking the render target
-        // dirty makes the engine rebind it instead of reusing what it had.
         context->CopyResource(a_colorResource, g_outputTexture);
-        RE::BSGraphics::RendererShadowState::GetSingleton()->GetRuntimeData().stateUpdateFlags.set(
-            RE::BSGraphics::ShaderFlags::DIRTY_RENDERTARGET);
 
         if (IsDebugEnabled()) {
             static std::uint32_t lastRenderWidth = 0, lastRenderHeight = 0, lastOutWidth = 0, lastOutHeight = 0;
