@@ -49,12 +49,14 @@ namespace
     {
         section.method = static_cast<std::uint32_t>(ini.GetLongValue("AntiAliasing", "Method", section.method));
         section.enabled = ini.GetBoolValue("AntiAliasing", "Enabled", section.enabled);
+        section.mipLodBias = static_cast<float>(ini.GetDoubleValue("AntiAliasing", "MipLODBias", section.mipLodBias));
     }
 
     void WriteAntiAliasing(CSimpleIniA& ini, const Settings::AntiAliasing& section)
     {
         ini.SetLongValue("AntiAliasing", "Method", static_cast<long>(section.method));
         ini.SetBoolValue("AntiAliasing", "Enabled", section.enabled);
+        ini.SetDoubleValue("AntiAliasing", "MipLODBias", section.mipLodBias);
     }
 
     void ReadPostProcessing(const CSimpleIniA& ini, Settings::PostProcessing& section)
@@ -180,6 +182,7 @@ namespace
     {
         auto& aa = settings.antiAliasing;
         aa.method = std::min(aa.method, 2u);
+        aa.mipLodBias = std::clamp(aa.mipLodBias, -2.0f, 0.0f);
 
         auto& pp = settings.postProcessing;
         pp.sharpening = std::clamp(pp.sharpening, 0.0f, 1.0f);

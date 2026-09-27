@@ -22,6 +22,11 @@ namespace NativeMenuIntegration
         // belong in a single write.
         void __stdcall OnSettingCommit(float) { RequestSaveSettings(); }
 
+        void __stdcall FormatPercent(float a_value, char* a_buffer, int a_bufferSize)
+        {
+            std::snprintf(a_buffer, a_bufferSize, "%d%%", static_cast<int>(a_value * 100.0f + 0.5f));
+        }
+
         // Vanilla sliders already report/expect a 0.0-1.0 fraction (the
         // ScrollBar's own 0-20 position is divided/multiplied internally
         // before it ever reaches us), matching our own float ranges exactly.
@@ -137,6 +142,15 @@ namespace NativeMenuIntegration
             RequestSaveSettings();
         }
 
+
+        float __stdcall GetTextureDeblur() { return -ActiveSettings()->antiAliasing.mipLodBias / 2.0f; }
+        void  __stdcall SetTextureDeblur(float a_value)
+        {
+            EditableSettings().antiAliasing.mipLodBias = -2.0f * a_value;
+            PublishSettings();
+            RequestSaveSettings();
+        }
+        bool __stdcall IsTextureDeblurEnabled() { return IsMotionBlurEnabled(); }
 
         float __stdcall GetSoftShadowsEnabled() { return ActiveSettings()->softShadows.enabled ? 1.0f : 0.0f; }
         void  __stdcall SetSoftShadowsEnabled(float a_value)
@@ -525,14 +539,14 @@ namespace NativeMenuIntegration
 
         if (postProcessing) {
             AddVanillaSetting("Display", Type::kSlider, "$SGS_MOTION_BLUR", &GetMotionBlurStrength,
-                &SetMotionBlurStrength, 0.0f, {}, &IsMotionBlurEnabled, nullptr, "$SGS_MOTION_BLUR_DESC", &OnSettingCommit);
+                &SetMotionBlurStrength, 0.0f, {}, &IsMotionBlurEnabled, &FormatPercent, "$SGS_MOTION_BLUR_DESC", &OnSettingCommit);
             AddVanillaSetting("Display", Type::kSlider, "$SGS_VIGNETTE", &GetVignette, &SetVignette, 0.0f, {}, nullptr,
-                nullptr, "$SGS_VIGNETTE_DESC", &OnSettingCommit);
+                &FormatPercent, "$SGS_VIGNETTE_DESC", &OnSettingCommit);
             AddVanillaSetting("Display", Type::kCheckbox, "$SGS_VIGNETTE_SNEAK_ONLY", &GetVignetteSneakOnly,
                 &SetVignetteSneakOnly, 0.0f, {}, &IsVignetteSneakOnlyEnabled, nullptr,
                 "$SGS_VIGNETTE_SNEAK_ONLY_DESC", &OnSettingCommit);
             AddVanillaSetting("Display", Type::kSlider, "$SGS_SHARPENING", &GetSharpening, &SetSharpening, 0.0f, {},
-                nullptr, nullptr, "$SGS_SHARPENING_DESC", &OnSettingCommit);
+                nullptr, &FormatPercent, "$SGS_SHARPENING_DESC", &OnSettingCommit);
             AddVanillaSetting("Display", Type::kCheckbox, "$SGS_CONTACT_SHADOWS", &GetContactShadows,
                 &SetContactShadows, 0.0f, {}, nullptr, nullptr, "$SGS_CONTACT_SHADOWS_DESC", &OnSettingCommit);
         }
@@ -541,6 +555,8 @@ namespace NativeMenuIntegration
             AddVanillaSetting("Display", Type::kDropdown, "$SGS_ANTI_ALIASING", &GetAntiAliasingMethod,
                 &SetAntiAliasingMethod, 1.0f, { "$SGS_OFF", "$SGS_TAA", "$SGS_FXAA", "$SGS_DLAA" }, nullptr, nullptr,
                 "$SGS_ANTI_ALIASING_DESC", &OnSettingCommit);
+            AddVanillaSetting("Display", Type::kSlider, "$SGS_TEXTURE_DEBLUR", &GetTextureDeblur, &SetTextureDeblur,
+                0.5f, {}, &IsTextureDeblurEnabled, &FormatPercent, "$SGS_TEXTURE_DEBLUR_DESC", &OnSettingCommit);
         }
 
         if (softShadows) {
@@ -561,10 +577,10 @@ namespace NativeMenuIntegration
             { "$SGS_OFF", "$SGS_PROTANOPIA", "$SGS_DEUTERANOPIA", "$SGS_TRITANOPIA", "$SGS_GRAYSCALE" },
             nullptr, nullptr, "$SGS_COLORBLIND_MODE_DESC", &OnSettingCommit);
         AddVanillaSetting("$SGS_ACCESSIBILITY_TAB", Type::kSlider, "$SGS_COLORBLIND_STRENGTH", &GetColorblindStrength,
-            &SetColorblindStrength, 1.0f, {}, &IsColorblindStrengthEnabled, nullptr,
+            &SetColorblindStrength, 1.0f, {}, &IsColorblindStrengthEnabled, &FormatPercent,
             "$SGS_COLORBLIND_STRENGTH_DESC", &OnSettingCommit);
         AddVanillaSetting("$SGS_ACCESSIBILITY_TAB", Type::kSlider, "$SGS_HIGH_CONTRAST", &GetHighContrastStrength,
-            &SetHighContrastStrength, 0.0f, {}, nullptr, nullptr, "$SGS_HIGH_CONTRAST_DESC", &OnSettingCommit);
+            &SetHighContrastStrength, 0.0f, {}, nullptr, &FormatPercent, "$SGS_HIGH_CONTRAST_DESC", &OnSettingCommit);
 
         if (reflex) {
             AddVanillaSetting("$SGS_PERFORMANCE_TAB", Type::kCheckbox, "$SGS_ENABLED", &GetReflexEnabled, &SetReflexEnabled, 1.0f, {},
@@ -607,13 +623,13 @@ namespace NativeMenuIntegration
             AddVanillaSetting("$SGS_EFFECTS_TAB", Type::kSlider, "$SGS_BLOOM_INTENSITY", &GetBloomIntensity, &SetBloomIntensity,
                 0.5f, {}, &IsGradingEnabled, &FormatDecimal2, "$SGS_BLOOM_INTENSITY_DESC", &OnSettingCommit);
             AddVanillaSetting("$SGS_EFFECTS_TAB", Type::kSlider, "$SGS_FILM_GRAIN", &GetFilmGrain, &SetFilmGrain,
-                0.0f, {}, nullptr, nullptr, "$SGS_FILM_GRAIN_DESC", &OnSettingCommit);
+                0.0f, {}, nullptr, &FormatPercent, "$SGS_FILM_GRAIN_DESC", &OnSettingCommit);
             AddVanillaSetting("$SGS_EFFECTS_TAB", Type::kSlider, "$SGS_LENS_FLARE", &GetLensFlare, &SetLensFlare,
-                0.0f, {}, nullptr, nullptr, "$SGS_LENS_FLARE_DESC", &OnSettingCommit);
+                0.0f, {}, nullptr, &FormatPercent, "$SGS_LENS_FLARE_DESC", &OnSettingCommit);
             AddVanillaSetting("$SGS_EFFECTS_TAB", Type::kSlider, "$SGS_DISTANCE_HAZE", &GetDistanceHaze,
-                &SetDistanceHaze, 0.0f, {}, nullptr, nullptr, "$SGS_DISTANCE_HAZE_DESC", &OnSettingCommit);
+                &SetDistanceHaze, 0.0f, {}, nullptr, &FormatPercent, "$SGS_DISTANCE_HAZE_DESC", &OnSettingCommit);
             AddVanillaSetting("$SGS_EFFECTS_TAB", Type::kSlider, "$SGS_HIGHLIGHT_GLOW", &GetHighlightGlow,
-                &SetHighlightGlow, 0.0f, {}, nullptr, nullptr, "$SGS_HIGHLIGHT_GLOW_DESC", &OnSettingCommit);
+                &SetHighlightGlow, 0.0f, {}, nullptr, &FormatPercent, "$SGS_HIGHLIGHT_GLOW_DESC", &OnSettingCommit);
             AddVanillaSetting("$SGS_EFFECTS_TAB", Type::kCheckbox, "$SGS_UNDERWATER_EFFECTS", &GetUnderwaterEffects,
                 &SetUnderwaterEffects, 0.0f, {}, nullptr, nullptr, "$SGS_UNDERWATER_EFFECTS_DESC", &OnSettingCommit);
             AddVanillaSetting("$SGS_EFFECTS_TAB", Type::kCheckbox, "$SGS_RAIN_DROPS", &GetRainDrops, &SetRainDrops,
@@ -629,7 +645,7 @@ namespace NativeMenuIntegration
                 g_lutOptions, nullptr, nullptr,
                 "$SGS_COLOR_GRADING_LUT_DESC", &OnSettingCommit);
             AddVanillaSetting("$SGS_LUT_TAB", Type::kSlider, "$SGS_LUT_STRENGTH", &GetLutStrength, &SetLutStrength, 1.0f, {},
-                &IsLutStrengthEnabled, nullptr, "$SGS_LUT_STRENGTH_DESC", &OnSettingCommit);
+                &IsLutStrengthEnabled, &FormatPercent, "$SGS_LUT_STRENGTH_DESC", &OnSettingCommit);
         }
 
         // Suite-wide switches, kept apart from the per-module tabs.

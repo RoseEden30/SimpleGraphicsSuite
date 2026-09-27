@@ -15,7 +15,8 @@ struct Settings
         // the others off (TAA and FXAA are the game's own).
         std::uint32_t method = 0;
 
-        bool enabled = true;
+        bool  enabled = true;
+        float mipLodBias = -1.0f;  // Texture Deblur, -2.0 to 0.0
 
         bool operator==(const AntiAliasing&) const = default;
     } antiAliasing;

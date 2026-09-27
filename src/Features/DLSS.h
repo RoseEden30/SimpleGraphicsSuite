@@ -11,7 +11,7 @@ namespace DLSS
 
     bool IsSupported();
 
-    // Records the render resolution Apply and RecommendedMipBias work from.
+    // Records the render resolution Apply works from.
     // Called every frame from AntiAliasing's Main_UpdateViewport hook while
     // DLAA is the active method.
     void UpdateJitter(RE::BSGraphics::State* a_state);
@@ -20,11 +20,6 @@ namespace DLSS
     // engine recomputes its own at a later call site, so this has to run from
     // that same one (AntiAliasing's Main_UpdateJitter) or it gets overwritten.
     void ApplyProjectionJitter(RE::BSGraphics::State* a_state);
-
-    // Mip LOD bias recommended by NVIDIA's programming guide (section 3.5)
-    // for the current render/display resolution ratio. 0 until UpdateJitter
-    // has run at least once.
-    float RecommendedMipBias();
 
     // Evaluates DLSS and copies the result back into a_colorResource, so it
     // has to run before the rest of the chain (bloom, SAO, tonemap) reads it.

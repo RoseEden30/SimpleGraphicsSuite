@@ -1,6 +1,6 @@
 #pragma once
 
-// TAA/FXAA choice and DLAA, with NVIDIA's mip LOD bias under DLAA.
+// TAA/FXAA choice and DLAA, with texture deblur under TAA and DLAA.
 namespace AntiAliasing
 {
     void InstallHooks();

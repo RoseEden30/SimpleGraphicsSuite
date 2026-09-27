@@ -64,7 +64,6 @@ namespace DLSS
         float         g_jitterY = 0.0f;
         std::uint32_t g_renderWidth = 0;
         std::uint32_t g_renderHeight = 0;
-        std::uint32_t g_displayWidth = 0;
 
         ID3D11Texture2D*          g_outputTexture = nullptr;
         ID3D11ShaderResourceView* g_outputSRV = nullptr;
@@ -339,19 +338,9 @@ namespace DLSS
             return;
         }
 
-        // DLAA never upscales - render resolution is always the display
-        // resolution, so there's no dynamic-resolution ratio to compute or
-        // drive here, unlike the (removed) upscaling quality modes.
+        // DLAA renders at display resolution.
         g_renderWidth = a_state->screenWidth;
         g_renderHeight = a_state->screenHeight;
-        g_displayWidth = g_renderWidth;
-    }
-
-    float RecommendedMipBias()
-    {
-        if (!g_supported || g_renderWidth == 0 || g_displayWidth == 0)
-            return 0.0f;
-        return std::log2(static_cast<float>(g_renderWidth) / static_cast<float>(g_displayWidth)) - 1.0f;
     }
 
     namespace

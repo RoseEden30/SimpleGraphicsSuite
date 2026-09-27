@@ -5,6 +5,8 @@
 #include "RE/BSGraphics.h"
 #include "Upscaling.h"
 
+#include <cmath>
+
 namespace AntiAliasing
 {
     namespace
@@ -110,15 +112,18 @@ namespace AntiAliasing
                 g_controllingNativeAA = false;
             }
 
-            const bool  taaEnabled = taaState && taaState->IsTAAEnabled();
-            const bool  dlssActive = activeModule && config.method == 2 && DLSS::IsSupported();
-            const float bias = DLSS::RecommendedMipBias();
+            const bool taaEnabled = taaState && taaState->IsTAAEnabled();
+            // DLAA falls back to TAA when unsupported, both get the deblur.
+            const bool biasActive = activeModule && (config.method == 0 || config.method == 2);
+            // log2(render / display) plus the deblur offset, -1 by default as NVIDIA and AMD advise.
+            const float bias =
+                std::log2(Upscaling::IsActive(*settings) ? settings->upscaling.renderScale : 1.0f) + config.mipLodBias;
 
-            if (dlssActive != g_biasApplied || (dlssActive && bias != g_appliedBias)) {
-                if (dlssActive != g_biasApplied)
-                    logger::info("Anti-aliasing: master={} enabled={} taa={} -> DLAA mip bias={}",
-                        settings->masterEnabled, config.enabled, taaEnabled, dlssActive);
-                Apply(dlssActive, bias);
+            if (biasActive != g_biasApplied || (biasActive && bias != g_appliedBias)) {
+                if (biasActive != g_biasApplied)
+                    logger::info("Anti-aliasing: master={} enabled={} taa={} -> mip bias {}",
+                        settings->masterEnabled, config.enabled, taaEnabled, biasActive ? bias : 0.0f);
+                Apply(biasActive, bias);
             }
         }
 
