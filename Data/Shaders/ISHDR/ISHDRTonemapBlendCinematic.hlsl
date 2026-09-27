@@ -543,11 +543,10 @@ PS_OUTPUT main(PS_INPUT input)
 		Color = TextureColor.Sample(TextureColorSampler, scaledUV.xy);
 	}
 
-	// Loading screens go through this same shader; none of our effects
-	// should tint them, so skip straight to output.
+	// Loading screens get the game's own look, none of our effects.
 	if (SGS_LoadingScreen > 0.5) {
 		PS_OUTPUT loadingOut;
-		loadingOut.Color.rgb = Color;
+		loadingOut.Color.rgb = Vanilla(Color, texCoord, scaledUV.xy);
 		loadingOut.Color.a = 1.0;
 		return loadingOut;
 	}
