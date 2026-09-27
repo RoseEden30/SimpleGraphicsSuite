@@ -15,11 +15,7 @@ struct Settings
         // the others off (TAA and FXAA are the game's own).
         std::uint32_t method = 0;
 
-        bool  enabled = true;
-        // TAA deblur: negative sharpens texture sampling under TAA. -0.9 out
-        // of a -3.0 max lands on a clean 30%, matching the 10%-step slider;
-        // the original mod's own default is -1.0.
-        float mipLodBias = -0.9f;
+        bool enabled = true;
 
         bool operator==(const AntiAliasing&) const = default;
     } antiAliasing;

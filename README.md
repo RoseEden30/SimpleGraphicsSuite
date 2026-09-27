@@ -6,7 +6,7 @@ One DLL, one ini. The plugin runs on its own. If [NativeSystemMenuFramework](htt
 
 ## Modules
 
-- **Anti-aliasing** - TAA (with a mip LOD bias deblur), FXAA, or NVIDIA DLAA through Streamline. Mutually exclusive; picking one turns the others off.
+- **Anti-aliasing** - TAA, FXAA, or NVIDIA DLAA through Streamline. Mutually exclusive; picking one turns the others off.
 - **Post-processing** - doodlum's Vanilla HDR tonemap with six selectable curves and an exposure offset, FidelityFX RCAS sharpening, exposure/contrast/saturation/bloom intensity, `.cube` LUT color grading, motion blur off the engine's own motion vector buffer, film grain, lens flare, distance haze, highlight glow, screen-space contact shadows, a vignette that can be limited to sneaking, underwater ripples with drips on the lens after surfacing, and rain drops on the lens when out in the rain.
 - **Render scale** - renders the 3D scene below native resolution through the engine's dynamic resolution, then reconstructs with FidelityFX FSR1 (EASU). Ignored under FXAA and DLAA, which both take the resolution back.
 - **Soft shadows** - scales the engine's own shadow softness with scene lighting: soft in dim/overcast light, sharp in direct sun, fixed indoors.
@@ -51,7 +51,7 @@ Set `SKYRIM_MODS_FOLDER` or `SKYRIM_FOLDER` to deploy on every build.
 
 ## Credits
 
-- [doodlum](https://github.com/doodlum) - [skyrim-vanilla-hdr](https://github.com/doodlum/skyrim-vanilla-hdr) (tonemap shaders), [skyrim-lod-bias](https://github.com/doodlum/skyrim-lod-bias) (TAA deblur), [skyrim-nvidia-reflex](https://github.com/doodlum/skyrim-nvidia-reflex), and SSEShaderTools (the shader-load entry patch).
+- [doodlum](https://github.com/doodlum) - [skyrim-vanilla-hdr](https://github.com/doodlum/skyrim-vanilla-hdr) (tonemap shaders), [skyrim-lod-bias](https://github.com/doodlum/skyrim-lod-bias) (mip LOD bias), [skyrim-nvidia-reflex](https://github.com/doodlum/skyrim-nvidia-reflex), and SSEShaderTools (the shader-load entry patch).
 - [Community Shaders](https://github.com/doodlum/skyrim-community-shaders) - the shader-replace hook, and the Streamline DLSS integration it is modelled on: frame buffer capture, camera constants, motion vector dilation, resource tagging.
 - [alandtse](https://github.com/alandtse) - [CommonLibSSE-NG](https://github.com/alandtse/CommonLibSSE-NG), and [open-shaders](https://github.com/alandtse/open-shaders), which the jitter and post-processing hook sites were checked against.
 - AMD - [FidelityFX FSR1](https://github.com/GPUOpen-Effects/FidelityFX-FSR), EASU and RCAS.

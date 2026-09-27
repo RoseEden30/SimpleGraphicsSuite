@@ -1,8 +1,6 @@
 #pragma once
 
-// TAA deblur / mip LOD bias, ported from doodlum's skyrim-lod-bias. Lowers
-// the mip LOD bias on the game's sampler states while TAA is active, which
-// sharpens the blur TAA otherwise introduces on textures.
+// TAA/FXAA choice and DLAA, with NVIDIA's mip LOD bias under DLAA.
 namespace AntiAliasing
 {
     void InstallHooks();

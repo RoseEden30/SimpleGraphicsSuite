@@ -133,21 +133,6 @@ namespace NativeMenuIntegration
         }
 
 
-        constexpr float kMaxDeblur = 3.0f;
-
-        float __stdcall GetTextureDeblur() { return -ActiveSettings()->antiAliasing.mipLodBias / kMaxDeblur; }
-        void  __stdcall SetTextureDeblur(float a_value)
-        {
-            EditableSettings().antiAliasing.mipLodBias = -(a_value * kMaxDeblur);
-            PublishSettings();
-            RequestSaveSettings();
-        }
-        bool __stdcall IsTextureDeblurEnabled()
-        {
-            const auto& aa = ActiveSettings()->antiAliasing;
-            return aa.enabled && aa.method == 0;
-        }
-
         float __stdcall GetSoftShadowsEnabled() { return ActiveSettings()->softShadows.enabled ? 1.0f : 0.0f; }
         void  __stdcall SetSoftShadowsEnabled(float a_value)
         {
@@ -551,9 +536,6 @@ namespace NativeMenuIntegration
             AddVanillaSetting("Display", Type::kDropdown, "$SGS_ANTI_ALIASING", &GetAntiAliasingMethod,
                 &SetAntiAliasingMethod, 1.0f, { "$SGS_OFF", "$SGS_TAA", "$SGS_FXAA", "$SGS_DLAA" }, nullptr, nullptr,
                 "$SGS_ANTI_ALIASING_DESC", &OnSettingCommit);
-            AddVanillaSetting("Display", Type::kSlider, "$SGS_TEXTURE_DEBLUR", &GetTextureDeblur, &SetTextureDeblur,
-                0.9f / kMaxDeblur, {}, &IsTextureDeblurEnabled, &FormatDecimal2,
-                "$SGS_TEXTURE_DEBLUR_DESC", &OnSettingCommit);
         }
 
         if (softShadows) {

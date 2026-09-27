@@ -15,7 +15,7 @@ namespace AntiAliasing
         REX::W32::ID3D11SamplerState* g_modified[RE::BSGraphics::SamplerStates::kAddressModes]{};
 
         bool  g_backedUp = false;
-        bool  g_appliedDeblur = false;
+        bool  g_biasApplied = false;
         float g_appliedBias = 0.0f;
         // While the module is active, our method dropdown owns TAA/FXAA
         // outright (see Update()) - these hold what they were before we
@@ -34,10 +34,8 @@ namespace AntiAliasing
             }
         }
 
-        // Recreates the linear filter sampler with the configured MipLODBias
-        // and swaps it into the game's live sampler collection. Turning the
-        // deblur off puts the game's own states straight back.
-        void Apply(bool a_deblur, float a_bias)
+        // Swaps in linear samplers with a_bias, or restores the game's.
+        void Apply(bool a_enabled, float a_bias)
         {
             constexpr auto kLinear = RE::BSGraphics::SamplerStates::kLinearFilter;
 
@@ -51,11 +49,11 @@ namespace AntiAliasing
                 g_backedUp = true;
             }
 
-            if (!a_deblur) {
+            if (!a_enabled) {
                 for (std::size_t i = 0; i < RE::BSGraphics::SamplerStates::kAddressModes; ++i)
                     live->states[i][kLinear] = g_backup.states[i][kLinear];
                 ReleaseModified();
-                g_appliedDeblur = false;
+                g_biasApplied = false;
                 g_appliedBias = 0.0f;
                 return;
             }
@@ -79,7 +77,7 @@ namespace AntiAliasing
             for (std::size_t i = 0; i < RE::BSGraphics::SamplerStates::kAddressModes; ++i)
                 live->states[i][kLinear] = g_modified[i] ? g_modified[i] : g_backup.states[i][kLinear];
 
-            g_appliedDeblur = true;
+            g_biasApplied = true;
             g_appliedBias = a_bias;
         }
 
@@ -124,17 +122,15 @@ namespace AntiAliasing
                 g_controllingNativeAA = false;
             }
 
-            const bool taaEnabled = taaState && taaState->IsTAAEnabled();
-            const bool dlssActive = activeModule && config.method == 2 && DLSS::IsSupported();
-            const bool shouldDeblur = (activeModule && config.method == 0 && taaEnabled) || dlssActive;
-            const float appliedBias = dlssActive ? DLSS::RecommendedMipBias() : config.mipLodBias;
+            const bool  taaEnabled = taaState && taaState->IsTAAEnabled();
+            const bool  dlssActive = activeModule && config.method == 2 && DLSS::IsSupported();
+            const float bias = DLSS::RecommendedMipBias();
 
-            // The bias only matters while the deblur is on.
-            if (shouldDeblur != g_appliedDeblur || (shouldDeblur && appliedBias != g_appliedBias)) {
-                if (shouldDeblur != g_appliedDeblur)
-                    logger::info("Anti-aliasing: master={} enabled={} taa={} -> active={}",
-                        settings->masterEnabled, config.enabled, taaEnabled, shouldDeblur);
-                Apply(shouldDeblur, appliedBias);
+            if (dlssActive != g_biasApplied || (dlssActive && bias != g_appliedBias)) {
+                if (dlssActive != g_biasApplied)
+                    logger::info("Anti-aliasing: master={} enabled={} taa={} -> DLAA mip bias={}",
+                        settings->masterEnabled, config.enabled, taaEnabled, dlssActive);
+                Apply(dlssActive, bias);
             }
         }
 

@@ -17,15 +17,21 @@ float4 SGS_ApplyMotionBlurPerObject(
 	// Color/motion vectors/depth are rendered at Dynamic Resolution's
 	// internal size, not the full output size a_uv is in.
 	float2 sampleUV = min(a_uvClamp, max(0.0, a_uvScale * a_uv));
-	float2 motion = a_motionVectorTexture.SampleLevel(a_motionVectorSampler, sampleUV, 0).xy;
-	float2 velocity = motion * MOTION_BLUR_AMOUNT;
-	float  centerDepth = a_depthTexture.SampleLevel(a_depthSampler, sampleUV, 0).x;
+
+	float2 velocity = a_motionVectorTexture.SampleLevel(a_motionVectorSampler, sampleUV, 0).xy * MOTION_BLUR_AMOUNT;
+
+	// No blur under half a pixel (McGuire et al. 2012).
+	float2 velocityPixels = velocity / float2(SCREEN_INV_WIDTH, SCREEN_INV_HEIGHT);
+	if (dot(velocityPixels, velocityPixels) < 0.25)
+		return a_currentColor;
+
+	float centerDepth = a_depthTexture.SampleLevel(a_depthSampler, sampleUV, 0).x;
 
 	float4 sum = a_currentColor;
 	float  weightSum = 1.0;
 	[unroll]
-	for (int i = 1; i <= 6; ++i) {
-		float2 uv = saturate(a_uv - velocity * (float(i) / 6.0));
+	for (int i = 0; i < 6; ++i) {
+		float2 uv = saturate(a_uv + velocity * ((float(i) - 2.5) / 6.0));
 		float2 sampleStepUV = min(a_uvClamp, max(0.0, a_uvScale * uv));
 		float  tapDepth = a_depthTexture.SampleLevel(a_depthSampler, sampleStepUV, 0).x;
 
