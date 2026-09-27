@@ -1,13 +1,13 @@
 #ifndef SIMPLEGRAPHICSSUITE_LENSFLARE_HLSLI
 #define SIMPLEGRAPHICSSUITE_LENSFLARE_HLSLI
 
-// Pseudo lens flare (John Chapman, 2013), fed only by pixels above the threshold after exposure.
+// Pseudo lens flare (John Chapman, 2013), fed only by light brighter than white after exposure.
 
 static const int    SGS_LF_GHOSTS = 5;
 static const float  SGS_LF_DISPERSAL = 0.35;
 static const float  SGS_LF_HALO_RADIUS = 0.47;
 static const float  SGS_LF_CHROMA = 0.004;
-static const float  SGS_LF_THRESHOLD = 8.0;
+static const float  SGS_LF_THRESHOLD = 1.0;
 static const float  SGS_LF_INTENSITY = 0.6;
 static const float3 SGS_LF_TINT_INNER = float3(1.0, 0.9, 0.8);
 static const float3 SGS_LF_TINT_OUTER = float3(0.8, 0.9, 1.0);
