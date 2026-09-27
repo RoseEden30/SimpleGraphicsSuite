@@ -29,7 +29,7 @@ set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
 # needs a hand-built Xbyak stub like doodlum's SSEShaderTools uses.
 set(SKSE_SUPPORT_XBYAK ON CACHE BOOL "" FORCE)
 
-# CommonLibSSE-NG is cloned under extern/, see the README.
+# CommonLibSSE-NG is a submodule under extern/, see the README.
 set(
     COMMONLIBSSE_DIR
     "${CMAKE_CURRENT_SOURCE_DIR}/extern/CommonLibSSE-NG"

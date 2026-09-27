@@ -1,8 +1,7 @@
 #pragma once
 
-// Doodlum's Vanilla HDR tonemap shaders, loaded via Community Shaders'
-// BSShader::LoadShaders hook, plus AMD CAS sharpening compiled into the
-// same shader.
+// Doodlum's Vanilla HDR tonemap shaders with the suite's effects, swapped in
+// through a BSShader::LoadShaders hook.
 namespace PostProcessing
 {
     void InstallHooks();
@@ -10,9 +9,7 @@ namespace PostProcessing
     // Applied on the next draw. Registered as a publish callback.
     void Reapply();
 
-    // Debug tab support: how many of our shaders are currently active, and a
-    // dev button to recompile them straight from disk (for iterating on the
-    // .hlsl/.hlsli files without restarting the game).
+    // Debug tab support.
     std::size_t ReplacedShaderCount();
     void        ReloadShadersFromDisk();
 

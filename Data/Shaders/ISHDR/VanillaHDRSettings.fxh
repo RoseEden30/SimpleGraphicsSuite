@@ -4,9 +4,7 @@
 
 #define SETTINGS_VERSION 1
 
-// HDR tonemapping method is now a runtime menu choice (SGS_TonemapMethod in
-// Settings.hlsli) - 1=channel, 2=peak, 3=average luma, 4=Frostbyte hue
-// preservation, 5=ACES. No compile-time default needed here anymore.
+// Tonemap method is a runtime setting, see SGS_TonemapMethod in Settings.hlsli.
 
 // Desaturates colors proportionally to brightness (not just near clipping -
 // at Weight=1.0 it visibly flattens the whole image, not just highlights).
