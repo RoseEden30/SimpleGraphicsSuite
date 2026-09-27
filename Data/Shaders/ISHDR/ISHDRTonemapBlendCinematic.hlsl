@@ -165,6 +165,7 @@ struct PS_OUTPUT
 #include "../SimpleGraphicsSuite/LUT.hlsli"
 #include "../SimpleGraphicsSuite/MotionBlur.hlsli"
 #include "../SimpleGraphicsSuite/ContactShadows.hlsli"
+#include "../SimpleGraphicsSuite/Hash.hlsli"
 #include "../SimpleGraphicsSuite/Water.hlsli"
 #include "../SimpleGraphicsSuite/LensFlare.hlsli"
 #include "../ISHDR/ictcp_colorspaces.fx"
@@ -173,6 +174,7 @@ struct PS_OUTPUT
 #include "SimpleGraphicsSuite/LUT.hlsli"
 #include "SimpleGraphicsSuite/MotionBlur.hlsli"
 #include "SimpleGraphicsSuite/ContactShadows.hlsli"
+#include "SimpleGraphicsSuite/Hash.hlsli"
 #include "SimpleGraphicsSuite/Water.hlsli"
 #include "SimpleGraphicsSuite/LensFlare.hlsli"
 #include "ictcp_colorspaces.fx"
@@ -454,10 +456,14 @@ float3 ApplyDistanceHaze(float3 color, float2 uv, float rawDepth, float near, fl
 	return lerp(desaturated, kHazeColor, tintAmount);
 }
 
-float3 ApplyFilmGrain(float3 color, float2 uv, float time, float strength)
+float3 ApplyFilmGrain(float3 color, float2 pixel, float time, float strength)
 {
-	float noise = rand21(uv + time) - 0.5;
-	return color + noise * strength * 0.1;
+	if (strength <= 0.0)
+		return color;
+
+	float noise = SGS_Hash13(float3(pixel, time)) + SGS_Hash13(float3(pixel.yx, time)) - 1.0;
+	float luma = dot(saturate(color), K_LUM);
+	return color + noise * 4.0 * luma * (1.0 - luma) * strength * 0.1;
 }
 
 PS_OUTPUT main(PS_INPUT input)
@@ -700,7 +706,7 @@ PS_OUTPUT main(PS_INPUT input)
 			middlegray.y / max(middlegray.x, DELTA), SGS_LensFlare);
 	}
 	Color = ApplyVignette(Color, input.TexCoord.xy, SGS_Vignette);
-	Color = ApplyFilmGrain(Color, input.TexCoord.xy, SGS_GrainTime, SGS_FilmGrain);
+	Color = ApplyFilmGrain(Color, input.Position.xy, SGS_GrainTime, SGS_FilmGrain);
 
 	Color += triDither(Color, scaledUV, Grey);
 	PS_OUTPUT psout;

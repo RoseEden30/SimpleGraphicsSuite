@@ -8,7 +8,7 @@
 #define MOTION_BLUR_AMOUNT 0.0
 #endif
 
-// Depth difference, relative to the center's distance, past which a tap counts as another surface.
+// Relative depth gap past which a tap is another surface.
 static const float SGS_MB_DEPTH_TOLERANCE = 0.02;
 
 float SGS_MB_LinearDepth(float a_depth, float a_near, float a_far)

@@ -1,15 +1,8 @@
 #ifndef SIMPLEGRAPHICSSUITE_WATER_HLSLI
 #define SIMPLEGRAPHICSSUITE_WATER_HLSLI
 
+// Needs Hash.hlsli included first.
 static const float SGS_TwoPi = 6.28318531;
-
-// Dave Hoskins, "Hash without Sine" (MIT).
-float SGS_Hash12(float2 p)
-{
-	float3 p3 = frac(p.xyx * 0.1031);
-	p3 += dot(p3, p3.yzx + 33.33);
-	return frac((p3.x + p3.y) * p3.z);
-}
 
 // Speeds are whole cycles per 1000 s, so SGS_GrainTime wrapping doesn't jump.
 float2 SGS_WaterWarp(float2 uv, float time, float2 frequency, float2 speed, float amplitude)
