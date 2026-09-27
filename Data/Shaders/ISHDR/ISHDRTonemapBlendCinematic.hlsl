@@ -561,7 +561,7 @@ PS_OUTPUT main(PS_INPUT input)
 			DynamicRes_WidthX_HeightY_PreviousWidthZ_PreviousHeightW.xy,
 			float2(DynamicRes_InvWidthX_InvHeightY_WidthClampZ_HeightClampW.z,
 				DynamicRes_WidthX_HeightY_PreviousWidthZ_PreviousHeightW.y),
-			float4(Color, 1.0)).rgb;
+			float4(Color, 1.0), SGS_CameraNear, SGS_CameraFar).rgb;
 	}
 
 	// SGS_Sharpening is 0-1 (1=max); RCAS takes stops of backoff, 0=max.
