@@ -52,7 +52,7 @@ Set `SKYRIM_MODS_FOLDER` or `SKYRIM_FOLDER` to deploy on every build.
 ## Credits
 
 - [doodlum](https://github.com/doodlum) - [skyrim-vanilla-hdr](https://github.com/doodlum/skyrim-vanilla-hdr) (tonemap shaders), [skyrim-lod-bias](https://github.com/doodlum/skyrim-lod-bias) (mip LOD bias), [skyrim-nvidia-reflex](https://github.com/doodlum/skyrim-nvidia-reflex), and SSEShaderTools (the shader-load entry patch).
-- [Community Shaders](https://github.com/doodlum/skyrim-community-shaders) - the shader-replace hook, and the Streamline DLSS integration it is modelled on: frame buffer capture, camera constants, motion vector dilation, resource tagging.
+- [Community Shaders](https://github.com/doodlum/skyrim-community-shaders) - the shader-replace hook, and the Streamline DLSS integration it is modeled on: frame buffer capture, camera constants, motion vector dilation, resource tagging.
 - [alandtse](https://github.com/alandtse) - [CommonLibSSE-NG](https://github.com/alandtse/CommonLibSSE-NG), and [open-shaders](https://github.com/alandtse/open-shaders), which the jitter and post-processing hook sites were checked against.
 - AMD - [FidelityFX FSR1](https://github.com/GPUOpen-Effects/FidelityFX-FSR), EASU and RCAS.
 - NVIDIA - [Streamline](https://github.com/NVIDIA-RTX/Streamline) (DLAA goes through it, not the raw NGX SDK) and [NVAPI](https://github.com/NVIDIA/nvapi).

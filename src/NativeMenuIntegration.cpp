@@ -129,7 +129,12 @@ namespace NativeMenuIntegration
         float __stdcall GetAntiAliasingMethod()
         {
             const auto& aa = ActiveSettings()->antiAliasing;
-            return aa.enabled ? static_cast<float>(aa.method) + 1.0f : 0.0f;
+            if (!aa.enabled)
+                return 0.0f;
+            // Without support DLAA renders as TAA, and isn't offered.
+            if (aa.method == 2 && !DLSS::IsSupported())
+                return 1.0f;
+            return static_cast<float>(aa.method) + 1.0f;
         }
         void __stdcall SetAntiAliasingMethod(float a_value)
         {
@@ -552,9 +557,12 @@ namespace NativeMenuIntegration
         }
 
         if (antiAliasing) {
+            // Last, so leaving it out moves no other index.
+            std::vector<std::string> methods{ "$SGS_OFF", "$SGS_TAA", "$SGS_FXAA" };
+            if (DLSS::IsSupported())
+                methods.push_back("$SGS_DLAA");
             AddVanillaSetting("Display", Type::kDropdown, "$SGS_ANTI_ALIASING", &GetAntiAliasingMethod,
-                &SetAntiAliasingMethod, 1.0f, { "$SGS_OFF", "$SGS_TAA", "$SGS_FXAA", "$SGS_DLAA" }, nullptr, nullptr,
-                "$SGS_ANTI_ALIASING_DESC", &OnSettingCommit);
+                &SetAntiAliasingMethod, 1.0f, methods, nullptr, nullptr, "$SGS_ANTI_ALIASING_DESC", &OnSettingCommit);
             AddVanillaSetting("Display", Type::kSlider, "$SGS_TEXTURE_DEBLUR", &GetTextureDeblur, &SetTextureDeblur,
                 0.5f, {}, &IsTextureDeblurEnabled, &FormatPercent, "$SGS_TEXTURE_DEBLUR_DESC", &OnSettingCommit);
         }
