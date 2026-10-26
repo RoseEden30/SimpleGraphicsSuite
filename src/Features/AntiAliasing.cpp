@@ -85,7 +85,7 @@ namespace AntiAliasing
             const auto settings = ActiveSettings();
             const auto& config = settings->antiAliasing;
 
-            auto* taaState = RE::BSGraphics::TAAState::GetSingleton();
+            auto* taaFlag = RE::BSGraphics::TAAEnabledFlag();
             auto* isManager = RE::ImageSpaceManager::GetSingleton();
             const auto fxaaIndex = RE::ImageSpaceManager::GetCurrentIndex(RE::ImageSpaceManager::ISFXAA);
             RE::ImageSpaceEffect* fxaa =
@@ -95,24 +95,24 @@ namespace AntiAliasing
 
             if (settings->masterEnabled) {
                 if (!g_controllingNativeAA) {
-                    g_originalTaaEnabled = taaState && taaState->IsTAAEnabled();
+                    g_originalTaaEnabled = taaFlag && *taaFlag;
                     g_originalFxaaActive = fxaa && fxaa->active;
                     g_controllingNativeAA = true;
                 }
                 // The flag gates the whole temporal mode (jitter, motion vectors), so DLAA needs it too.
-                if (taaState && taaState->inner)
-                    taaState->inner->taaEnabled = config.enabled && (config.method == 0 || config.method == 2);
+                if (taaFlag)
+                    *taaFlag = config.enabled && (config.method == 0 || config.method == 2);
                 if (fxaa)
                     fxaa->active = config.enabled && config.method == 1;
             } else if (g_controllingNativeAA) {
-                if (taaState && taaState->inner)
-                    taaState->inner->taaEnabled = g_originalTaaEnabled;
+                if (taaFlag)
+                    *taaFlag = g_originalTaaEnabled;
                 if (fxaa)
                     fxaa->active = g_originalFxaaActive;
                 g_controllingNativeAA = false;
             }
 
-            const bool taaEnabled = taaState && taaState->IsTAAEnabled();
+            const bool taaEnabled = taaFlag && *taaFlag;
             // DLAA falls back to TAA when unsupported, both get the deblur.
             const bool biasActive = activeModule && (config.method == 0 || config.method == 2);
             // log2(render / display) plus the deblur offset, -1 by default as NVIDIA and AMD advise.

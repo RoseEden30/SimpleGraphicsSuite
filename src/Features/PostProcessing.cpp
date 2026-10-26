@@ -691,17 +691,17 @@ namespace PostProcessing
             RE::ImageSpaceManager* a_this, std::uint32_t a3, RE::RENDER_TARGET a_target, void* a4, bool a5)
         {
             // DLAA already resolved kMAIN, skip the vanilla TAA pass in this chain.
-            auto* taa = RE::BSGraphics::TAAState::GetSingleton();
-            g_motionVectorsValid = taa && taa->IsTAAEnabled();
-            if (!ApplyDLSS() || !taa || !taa->inner) {
+            auto* taaFlag = RE::BSGraphics::TAAEnabledFlag();
+            g_motionVectorsValid = taaFlag && *taaFlag;
+            if (!ApplyDLSS() || !taaFlag) {
                 g_originalMainPostProcessing(a_this, a3, a_target, a4, a5);
                 return;
             }
 
-            const bool taaEnabled = taa->inner->taaEnabled;
-            taa->inner->taaEnabled = false;
+            const bool taaEnabled = *taaFlag;
+            *taaFlag = false;
             g_originalMainPostProcessing(a_this, a3, a_target, a4, a5);
-            taa->inner->taaEnabled = taaEnabled;
+            *taaFlag = taaEnabled;
         }
 
         constexpr std::uintptr_t kLoadShadersEntrySize = 9;

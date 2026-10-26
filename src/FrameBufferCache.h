@@ -18,8 +18,9 @@ namespace FrameBufferCache
         Matrix  cameraViewProj;
         Matrix  cameraViewProjUnjittered;
         Matrix  cameraPreviousViewProjUnjittered;
-        Matrix  cameraProjUnjittered;
+        // Inverse first, checked in game.
         Matrix  cameraProjUnjitteredInverse;
+        Matrix  cameraProjUnjittered;
         Matrix  cameraViewInverse;
         Matrix  cameraViewProjInverse;
         Matrix  cameraProjInverse;

@@ -6,27 +6,18 @@
 
 namespace RE::BSGraphics
 {
-    // Holds the game's "TAA is active" flag. Only the flag is used here, so
-    // everything ahead of it is untyped padding.
-    struct TAAState
+    // The game's "TAA is active" flag. It sits further into ImageSpaceManager
+    // in VR, so it goes through CommonLib's per-runtime layouts.
+    inline bool* TAAEnabledFlag()
     {
-        struct Inner
-        {
-            std::uint8_t unk00[0x18];
-            bool taaEnabled;
-        };
+        auto* manager = ImageSpaceManager::GetSingleton();
+        if (!manager)
+            return nullptr;
 
-        std::uint8_t unk00[0x1F0];
-        Inner*       inner;
-
-        static TAAState* GetSingleton()
-        {
-            REL::Relocation<TAAState**> instance{ RELOCATION_ID(527731, 414660) };  // 31D11A0, 326B280
-            return *instance;
-        }
-
-        bool IsTAAEnabled() const { return inner && inner->taaEnabled; }
-    };
+        auto* temporalAA = REL::Module::IsVR() ? manager->GetVRRuntimeData()->BSImagespaceShaderISTemporalAA :
+                                                 manager->GetRuntimeData().BSImagespaceShaderISTemporalAA;
+        return temporalAA ? &temporalAA->taaEnabled : nullptr;
+    }
 
     // The game's array of sampler states, indexed by address mode and filter
     // mode. Index [addressMode][3] is the linear filter, the only one this

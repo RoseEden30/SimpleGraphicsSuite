@@ -9,7 +9,6 @@
 #include <cstring>
 #include <d3d11.h>
 #include <d3dcompiler.h>
-#include <sl_matrix_helpers.h>
 
 namespace DLSS
 {
@@ -43,13 +42,11 @@ namespace DLSS
             return 2.0f * std::atan(unitHalfHeight);
         }
 
-        // sl::float4x4 uses row-vector math, the engine's captured matrices
-        // use column-vector, so a transpose reconciles the two.
         sl::float4x4 ToSL(const DirectX::SimpleMath::Matrix& a_matrix)
         {
-            const auto   transposed = a_matrix.Transpose();
+            static_assert(sizeof(sl::float4x4) == sizeof(DirectX::SimpleMath::Matrix));
             sl::float4x4 out{};
-            std::memcpy(&out, &transposed, sizeof(out));
+            std::memcpy(&out, &a_matrix, sizeof(out));
             return out;
         }
 
@@ -427,10 +424,6 @@ namespace DLSS
         if (frameCount != g_lastAppliedFrame + 1)
             g_forceReset = true;
 
-        // The derived clip matrices come from sl_matrix_helpers.h's
-        // recalculateCameraMatrices(). It approximates the previous frame from
-        // a static, which its own comment warns about, but it is what
-        // Community Shaders ships against.
         const auto& frame = FrameBufferCache::Get();
 
         sl::Constants constants{};
@@ -443,14 +436,26 @@ namespace DLSS
         constants.cameraNear = RE::BSGraphics::CameraNear();
         constants.cameraFar = RE::BSGraphics::CameraFar();
 
-        const auto viewInverse = frame.cameraViewInverse.Transpose();
+        // Streamline uses row vectors, the engine column vectors.
+        using DirectX::SimpleMath::Matrix;
+        const Matrix viewInverse = frame.cameraViewInverse.Transpose();
+        const Matrix viewProj = frame.cameraViewProjUnjittered.Transpose();
+        const Matrix viewToClip = viewInverse * viewProj;
+        // The view is camera-relative.
+        const DirectX::SimpleMath::Vector3 originDelta{ frame.cameraPosAdjust.x - frame.cameraPreviousPosAdjust.x,
+            frame.cameraPosAdjust.y - frame.cameraPreviousPosAdjust.y,
+            frame.cameraPosAdjust.z - frame.cameraPreviousPosAdjust.z };
+        const Matrix clipToPrevClip = viewProj.Invert() * Matrix::CreateTranslation(originDelta) *
+            frame.cameraPreviousViewProjUnjittered.Transpose();
+
         constants.cameraRight = { viewInverse._11, viewInverse._12, viewInverse._13 };
         constants.cameraUp = { viewInverse._21, viewInverse._22, viewInverse._23 };
         constants.cameraFwd = { viewInverse._31, viewInverse._32, viewInverse._33 };
         constants.cameraPos = { frame.cameraPosAdjust.x, frame.cameraPosAdjust.y, frame.cameraPosAdjust.z };
-        constants.cameraViewToClip = ToSL(frame.cameraProjUnjittered);
-
-        sl::recalculateCameraMatrices(constants);
+        constants.cameraViewToClip = ToSL(viewToClip);
+        constants.clipToCameraView = ToSL(viewToClip.Invert());
+        constants.clipToPrevClip = ToSL(clipToPrevClip);
+        constants.prevClipToClip = ToSL(clipToPrevClip.Invert());
 
         constants.jitterOffset = { -g_jitterX, -g_jitterY };
         // The engine's native motion vectors are already close enough to
