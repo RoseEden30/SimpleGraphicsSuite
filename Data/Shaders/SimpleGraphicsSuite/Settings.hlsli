@@ -27,10 +27,6 @@ cbuffer SimpleGraphicsSuiteSettings : register(b13)
 	float SGS_CameraFar;
 	float SGS_HighlightGlow;  // 0.0-1.0, 0=off
 	float SGS_TonemapExposureOffset;  // stops, -2.0 to 2.0
-	float SGS_ContactShadows;  // 0.0-1.0, 0=off
-	float SGS_LightDirX;       // world-space direction toward the light
-	float SGS_LightDirY;
-	float SGS_LightDirZ;
 	float SGS_LoadingScreen;  // 1 while the loading menu is open, else 0
 	float SGS_UnderwaterWarp;  // 0.0-1.0, fades in and out when diving
 	float SGS_LensDrops;       // 0.0-1.0, fades to 0 as the lens dries

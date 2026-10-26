@@ -2,6 +2,7 @@
 
 #include "Config.h"
 #include "PresentHook.h"
+#include "VTablePatch.h"
 
 #pragma warning(push)
 #pragma warning(disable : 4828)
@@ -40,7 +41,8 @@ namespace Reflex
             NV_SET_SLEEP_MODE_PARAMS params{};
             params.version = NV_SET_SLEEP_MODE_PARAMS_VER;
             params.bLowLatencyMode = active && config.lowLatencyMode;
-            params.bLowLatencyBoost = active && config.lowLatencyBoost;
+            // The driver only boosts in low latency mode.
+            params.bLowLatencyBoost = params.bLowLatencyMode && config.lowLatencyBoost;
             params.bUseMarkersToOptimize = active && config.useMarkersToOptimize;
             params.minimumIntervalUs = active && config.useFpsLimit && config.fpsLimit > 0.0f
                                            ? static_cast<NvU32>(1'000'000.0f / config.fpsLimit)
@@ -62,7 +64,7 @@ namespace Reflex
 
             g_appliedParams = params;
             g_everApplied = true;
-            logger::info("Reflex: active={} lowLatency={} boost={} fpsLimitUs={}", active, params.bLowLatencyMode != 0,
+            logger::debug("Reflex: active={} lowLatency={} boost={} fpsLimitUs={}", active, params.bLowLatencyMode != 0,
                 params.bLowLatencyBoost != 0, params.minimumIntervalUs);
         }
 
@@ -84,8 +86,22 @@ namespace Reflex
         {
             if (g_publishPending.exchange(false))
                 ApplySleepMode(*ActiveSettings());
-            if (IsActive())
+            if (IsActive()) {
+                SetLatencyMarker(SIMULATION_END);
+                SetLatencyMarker(RENDERSUBMIT_END);
                 SetLatencyMarker(PRESENT_START);
+            }
+        }
+
+        // The engine clears the context state when it starts rendering a frame.
+        using ClearState_t = void (*)(REX::W32::ID3D11DeviceContext*);
+        ClearState_t g_originalClearState = nullptr;
+
+        void Hook_ClearState(REX::W32::ID3D11DeviceContext* a_this)
+        {
+            if (IsActive())
+                SetLatencyMarker(RENDERSUBMIT_START);
+            g_originalClearState(a_this);
         }
 
         void OnPostPresent(REX::W32::ID3D11Device*, REX::W32::ID3D11DeviceContext*, REX::W32::IDXGISwapChain*)
@@ -162,6 +178,12 @@ namespace Reflex
 
         const auto target = RELOCATION_ID(35565, 36564).address() + REL::Relocate(0x1E, 0x3E, 0x33);
         Main_Update_Start::func = SKSE::GetTrampoline().write_call<5>(target, Main_Update_Start::thunk);
+
+        // ID3D11DeviceContext::ClearState is slot 110.
+        auto* context = RE::BSGraphics::Renderer::GetSingleton()->GetRuntimeData().context;
+        if (!context || !VTablePatch::PatchSlot(context, 110, reinterpret_cast<void*>(&Hook_ClearState),
+                            reinterpret_cast<void**>(&g_originalClearState)))
+            logger::warn("Reflex: couldn't hook ClearState, the render submit marker is missing");
 
         RegisterPublishCallback(&OnPublish);
         ApplySleepMode(*ActiveSettings());

@@ -30,6 +30,7 @@ namespace Streamline
         const sl::ViewportHandle& a_viewport, const sl::ResourceTag* a_tags, std::uint32_t a_count, void* a_context);
     sl::Result EvaluateFeature(sl::Feature a_feature, const sl::FrameToken& a_frame, const sl::BaseStructure** a_inputs,
         std::uint32_t a_count, void* a_context);
+    sl::Result FreeResources(sl::Feature a_feature, const sl::ViewportHandle& a_viewport);
 
     sl::Result DLSSSetOptions(const sl::ViewportHandle& a_viewport, const sl::DLSSOptions& a_options);
 }

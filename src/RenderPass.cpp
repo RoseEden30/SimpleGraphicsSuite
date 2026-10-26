@@ -85,7 +85,8 @@ namespace RenderPass
     void Draw(REX::W32::ID3D11RenderTargetView* a_rtv, std::uint32_t a_width, std::uint32_t a_height,
         REX::W32::ID3D11PixelShader* a_pixelShader,
         std::initializer_list<REX::W32::ID3D11ShaderResourceView*> a_srvs,
-        std::initializer_list<REX::W32::ID3D11SamplerState*>      a_samplers)
+        std::initializer_list<REX::W32::ID3D11SamplerState*>      a_samplers,
+        REX::W32::ID3D11BlendState*                                a_blend)
     {
         auto* vs = GetFullScreenTriangleVS();
         if (!vs || !a_pixelShader || !a_rtv)
@@ -104,7 +105,7 @@ namespace RenderPass
 
         // Whatever the engine left bound would otherwise blend, scissor or
         // depth-test this pass, and any live GS/HS/DS would run on it.
-        context->OMSetBlendState(nullptr, nullptr, 0xffffffff);
+        context->OMSetBlendState(a_blend, nullptr, 0xffffffff);
         context->OMSetDepthStencilState(nullptr, 0);
         context->RSSetState(nullptr);
         context->GSSetShader(nullptr, nullptr, 0);

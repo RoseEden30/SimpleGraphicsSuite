@@ -26,6 +26,10 @@ namespace DLSS
     // Returns false and leaves a_colorResource untouched on any failure.
     bool Apply(ID3D11Resource* a_colorResource, std::uint32_t a_outWidth, std::uint32_t a_outHeight);
 
+    // Frees the DLSS feature and its textures once DLAA is deselected. Cheap
+    // to call every frame; Apply recreates everything when needed.
+    void Release();
+
     // Logged once per distinct reason, so a failure that repeats every frame
     // doesn't flood the log.
     void SetLastFailureReason(std::string a_reason);

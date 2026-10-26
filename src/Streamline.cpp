@@ -20,6 +20,7 @@ namespace Streamline
         PFun_slEvaluateFeature*       s_slEvaluateFeature = nullptr;
         PFun_slGetFeatureFunction*    s_slGetFeatureFunction = nullptr;
         PFun_slUpgradeInterface*      s_slUpgradeInterface = nullptr;
+        PFun_slFreeResources*         s_slFreeResources = nullptr;
 
         PFun_slDLSSSetOptions*         s_slDLSSSetOptions = nullptr;
 
@@ -73,10 +74,11 @@ namespace Streamline
             reinterpret_cast<PFun_slGetFeatureFunction*>(GetProcAddress(g_interposer, "slGetFeatureFunction"));
         s_slUpgradeInterface =
             reinterpret_cast<PFun_slUpgradeInterface*>(GetProcAddress(g_interposer, "slUpgradeInterface"));
+        s_slFreeResources = reinterpret_cast<PFun_slFreeResources*>(GetProcAddress(g_interposer, "slFreeResources"));
 
         if (!s_slInit || !s_slIsFeatureSupported || !s_slSetD3DDevice || !s_slGetNewFrameToken ||
             !s_slSetConstants || !s_slSetTag || !s_slEvaluateFeature || !s_slGetFeatureFunction ||
-            !s_slUpgradeInterface) {
+            !s_slUpgradeInterface || !s_slFreeResources) {
             logger::warn("Streamline: interposer loaded but missing expected exports");
             return;
         }
@@ -171,6 +173,11 @@ namespace Streamline
     {
         return s_slEvaluateFeature ? s_slEvaluateFeature(a_feature, a_frame, a_inputs, a_count, a_context)
                                     : sl::Result::eErrorNotInitialized;
+    }
+
+    sl::Result FreeResources(sl::Feature a_feature, const sl::ViewportHandle& a_viewport)
+    {
+        return s_slFreeResources ? s_slFreeResources(a_feature, a_viewport) : sl::Result::eErrorNotInitialized;
     }
 
     sl::Result DLSSSetOptions(const sl::ViewportHandle& a_viewport, const sl::DLSSOptions& a_options)

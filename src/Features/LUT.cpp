@@ -133,7 +133,7 @@ namespace LUT
             g_size = size;
             g_loadedName = a_path.stem().string();
             g_failedName.clear();
-            logger::info("LUT: loaded {} ({}x{}x{})", g_loadedName, size, size, size);
+            logger::debug("LUT: loaded {} ({}x{}x{})", g_loadedName, size, size, size);
             return true;
         }
     }

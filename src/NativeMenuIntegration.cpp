@@ -237,6 +237,11 @@ namespace NativeMenuIntegration
         }
         // Every other Reflex row is gated on the module being active.
         bool __stdcall IsReflexEnabled() { return ActiveSettings()->reflex.enabled; }
+        bool __stdcall IsReflexBoostEnabled()
+        {
+            const auto& reflex = ActiveSettings()->reflex;
+            return reflex.enabled && reflex.lowLatencyMode;
+        }
 
         float __stdcall GetReflexLowLatency() { return ActiveSettings()->reflex.lowLatencyMode ? 1.0f : 0.0f; }
         void  __stdcall SetReflexLowLatency(float a_value)
@@ -552,8 +557,10 @@ namespace NativeMenuIntegration
                 "$SGS_VIGNETTE_SNEAK_ONLY_DESC", &OnSettingCommit);
             AddVanillaSetting("Display", Type::kSlider, "$SGS_SHARPENING", &GetSharpening, &SetSharpening, 0.0f, {},
                 nullptr, &FormatPercent, "$SGS_SHARPENING_DESC", &OnSettingCommit);
-            AddVanillaSetting("Display", Type::kCheckbox, "$SGS_CONTACT_SHADOWS", &GetContactShadows,
-                &SetContactShadows, 0.0f, {}, nullptr, nullptr, "$SGS_CONTACT_SHADOWS_DESC", &OnSettingCommit);
+            // The pass reads the flat-screen PerFrame layout.
+            if (!REL::Module::IsVR())
+                AddVanillaSetting("Display", Type::kCheckbox, "$SGS_CONTACT_SHADOWS", &GetContactShadows,
+                    &SetContactShadows, 0.0f, {}, nullptr, nullptr, "$SGS_CONTACT_SHADOWS_DESC", &OnSettingCommit);
         }
 
         if (antiAliasing) {
@@ -597,7 +604,7 @@ namespace NativeMenuIntegration
                 &SetReflexLowLatency, 1.0f, {}, &IsReflexEnabled, nullptr,
                 "$SGS_LOW_LATENCY_MODE_DESC", &OnSettingCommit);
             AddVanillaSetting("$SGS_PERFORMANCE_TAB", Type::kCheckbox, "$SGS_LOW_LATENCY_BOOST", &GetReflexBoost, &SetReflexBoost,
-                0.0f, {}, &IsReflexEnabled, nullptr,
+                0.0f, {}, &IsReflexBoostEnabled, nullptr,
                 "$SGS_LOW_LATENCY_BOOST_DESC", &OnSettingCommit);
             AddVanillaSetting("$SGS_PERFORMANCE_TAB", Type::kCheckbox, "$SGS_USE_MARKERS_TO_OPTIMIZE", &GetReflexMarkers,
                 &SetReflexMarkers, 0.0f, {}, &IsReflexEnabled, nullptr,

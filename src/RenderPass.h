@@ -1,16 +1,18 @@
 #pragma once
 
-// Full-screen passes issued from C++, used by Accessibility.
+// Full-screen passes issued from C++, used by Accessibility and contact shadows.
 namespace RenderPass
 {
     REX::W32::ID3D11PixelShader* CompilePixelShader(
         const std::filesystem::path& a_path, const D3D_SHADER_MACRO* a_macros = nullptr);
 
-    // Binds a_srvs to t0.. and a_samplers to s0.., draws into a_rtv.
+    // Binds a_srvs to t0.. and a_samplers to s0.., draws into a_rtv, opaque
+    // unless a_blend is given.
     void Draw(REX::W32::ID3D11RenderTargetView* a_rtv, std::uint32_t a_width, std::uint32_t a_height,
         REX::W32::ID3D11PixelShader* a_pixelShader,
         std::initializer_list<REX::W32::ID3D11ShaderResourceView*> a_srvs,
-        std::initializer_list<REX::W32::ID3D11SamplerState*>      a_samplers);
+        std::initializer_list<REX::W32::ID3D11SamplerState*>      a_samplers,
+        REX::W32::ID3D11BlendState*                                a_blend = nullptr);
 
     // Restores what a pass changes, so the engine's state cache stays valid.
     class StateBackup

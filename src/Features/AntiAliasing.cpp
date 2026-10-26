@@ -121,7 +121,7 @@ namespace AntiAliasing
 
             if (biasActive != g_biasApplied || (biasActive && bias != g_appliedBias)) {
                 if (biasActive != g_biasApplied)
-                    logger::info("Anti-aliasing: master={} enabled={} taa={} -> mip bias {}",
+                    logger::debug("Anti-aliasing: master={} enabled={} taa={} -> mip bias {}",
                         settings->masterEnabled, config.enabled, taaEnabled, biasActive ? bias : 0.0f);
                 Apply(biasActive, bias);
             }

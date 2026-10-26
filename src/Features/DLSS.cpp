@@ -568,4 +568,20 @@ namespace DLSS
         SetLastFailureReason("");
         return true;
     }
+
+    void Release()
+    {
+        // The output texture is created on the first Apply, so it marks a live feature.
+        if (!g_outputTexture)
+            return;
+
+        sl::DLSSOptions options{};
+        options.mode = sl::DLSSMode::eOff;
+        Streamline::DLSSSetOptions(g_viewport, options);
+        Streamline::FreeResources(sl::kFeatureDLSS, g_viewport);
+
+        ReleaseOutput();
+        ReleaseEncodeTextures();
+        g_forceReset = true;
+    }
 }
