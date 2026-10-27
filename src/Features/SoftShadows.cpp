@@ -74,16 +74,22 @@ namespace SoftShadows
             if (!setting)
                 return;
 
+            const auto settings = ActiveSettings();
+            if (!settings->masterEnabled || !settings->softShadows.enabled) {
+                if (g_backedUp) {
+                    *setting = g_original;
+                    g_backedUp = false;
+                }
+                return;
+            }
+
+            // Taken on each activation, so a change made while off isn't lost.
             if (!g_backedUp) {
                 g_original = *setting;
                 g_backedUp = true;
             }
 
-            const auto  settings = ActiveSettings();
-            const float target = settings->masterEnabled && settings->softShadows.enabled
-                                      ? kRadiusScaleBase * ComputeSoftness()
-                                      : g_original;
-
+            const float target = kRadiusScaleBase * ComputeSoftness();
             if (*setting != target)
                 *setting = target;
         }

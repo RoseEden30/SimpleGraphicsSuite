@@ -594,4 +594,6 @@ namespace DLSS
         ReleaseEncodeTextures();
         g_forceReset = true;
     }
+
+    void ResetHistory() { g_forceReset = true; }
 }

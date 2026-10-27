@@ -65,6 +65,9 @@ namespace PostProcessing
         bool NeedsReplacedShader(const Settings& a_settings);  // defined near ApplyEnabled below
         void ApplyEnabled(bool a_enabled);
 
+        // Whether the replaced shaders are bound, nothing else reads our resources.
+        bool g_shadersActive = false;
+
         std::atomic<bool> g_reapplyPending{ false };
         std::atomic<bool> g_reloadPending{ false };
         void              ReloadShaders();
@@ -87,7 +90,11 @@ namespace PostProcessing
         void OnPrePresent(REX::W32::ID3D11Device*, REX::W32::ID3D11DeviceContext*, REX::W32::IDXGISwapChain*)
         {
             auto* ui = RE::UI::GetSingleton();
-            g_pausedByMenu = ui && ui->GameIsPaused();
+            const bool paused = ui && ui->GameIsPaused();
+            // The camera can cut when a pausing menu opens or closes, the map most of all.
+            if (paused != g_pausedByMenu)
+                DLSS::ResetHistory();
+            g_pausedByMenu = paused;
             g_loadingMenuOpen = ui && ui->IsMenuOpen(RE::LoadingMenu::MENU_NAME);
         }
 
@@ -271,7 +278,7 @@ namespace PostProcessing
 
             const auto& postProcessing = a_settings.postProcessing;
 
-            LUT::Select(postProcessing.lutName);
+            LUT::Select(NeedsReplacedShader(a_settings) ? postProcessing.lutName : std::string());
 
             auto* context = RE::BSGraphics::Renderer::GetSingleton()->GetRuntimeData().context;
 
@@ -418,6 +425,9 @@ namespace PostProcessing
             const auto it = g_patchedVtables.find(vtable);
             const bool result = it != g_patchedVtables.end() ? it->second(a_this, a_technique) : false;
 
+            if (!g_shadersActive)
+                return result;
+
             auto& runtimeData = RE::BSGraphics::Renderer::GetSingleton()->GetRuntimeData();
 
             if (g_settingsBuffer)
@@ -503,6 +513,7 @@ namespace PostProcessing
 
             const auto activeSettings = ActiveSettings();
             const bool enabledNow = NeedsReplacedShader(*activeSettings);
+            g_shadersActive = enabledNow;
             UpdateSettingsBuffer(*activeSettings);
 
             std::size_t replaced = 0;
@@ -610,6 +621,11 @@ namespace PostProcessing
             }
             for (const auto& shader : g_replaced)
                 shader.entry->shader = a_enabled ? shader.replaced : shader.original;
+
+            g_shadersActive = a_enabled;
+            // Skipped while off, so it would resume from stale state.
+            if (!a_enabled)
+                ResetWater();
         }
 
         void ReloadShaders()

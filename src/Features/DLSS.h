@@ -30,6 +30,9 @@ namespace DLSS
     // to call every frame; Apply recreates everything when needed.
     void Release();
 
+    // Drops the history on the next Apply, for camera cuts.
+    void ResetHistory();
+
     // Logged once per distinct reason, so a failure that repeats every frame
     // doesn't flood the log.
     void SetLastFailureReason(std::string a_reason);
