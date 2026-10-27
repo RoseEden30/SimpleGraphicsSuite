@@ -19,6 +19,8 @@ namespace Compatibility
         // name and takes over the same pipeline.
         constexpr Entry kKnown[] = {
             { L"CommunityShaders.dll", "Community Shaders", kAntiAliasing | kPostProcessing | kReflex | kSoftShadows },
+            // Hooks the same jitter call.
+            { L"SkyrimUpscaler.dll", "Skyrim Upscaler", kAntiAliasing },
         };
 
         // ENB replaces d3d11.dll itself, so it can't be named like the mods above.

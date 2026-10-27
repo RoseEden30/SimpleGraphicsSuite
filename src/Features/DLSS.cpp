@@ -122,7 +122,7 @@ namespace DLSS
         // Three textures DLSS reads through Streamline: dilated motion vectors
         // (undilated ones ghost around fast-moving edges), a reactive mask
         // from the engine's TAA mask, and a transparency mask from its
-        // normal/SSR-mask target. See EncodeUpscalingTextures.hlsl.
+        // underwater mask target. See EncodeUpscalingTextures.hlsl.
         ID3D11ComputeShader*       g_encodeShader = nullptr;
         ID3D11Buffer*              g_encodeCB = nullptr;
         ID3D11Texture2D*           g_dilatedMV = nullptr;
@@ -314,6 +314,10 @@ namespace DLSS
 
         Streamline::EnsureInitialized();
         g_supported = Streamline::IsAvailable() && Streamline::IsDLSSSupported();
+
+        // Compiled now rather than on the first DLAA frame, which would hitch.
+        if (g_supported)
+            EnsureEncodeShader();
     }
 
     bool IsSupported() { return g_supported; }
