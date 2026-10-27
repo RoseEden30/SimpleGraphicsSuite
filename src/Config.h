@@ -51,7 +51,6 @@ struct Settings
         float highlightGlow = 0.0f;  // 0.0-1.0, 0=off
         bool underwaterEffects = false;
         bool rainDrops = false;
-        bool contactShadows = false;
 
         // 3D color grading LUT (.cube), scanned from
         // Data/Shaders/SimpleGraphicsSuite/LUTs/ - empty name means none.

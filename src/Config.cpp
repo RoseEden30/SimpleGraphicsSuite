@@ -85,7 +85,6 @@ namespace
             static_cast<float>(ini.GetDoubleValue("PostProcessing", "HighlightGlow", section.highlightGlow));
         section.underwaterEffects = ini.GetBoolValue("PostProcessing", "UnderwaterEffects", section.underwaterEffects);
         section.rainDrops = ini.GetBoolValue("PostProcessing", "RainDrops", section.rainDrops);
-        section.contactShadows = ini.GetBoolValue("PostProcessing", "ContactShadows", section.contactShadows);
         section.lutName = ini.GetValue("PostProcessing", "LUT", section.lutName.c_str());
         section.lutStrength =
             static_cast<float>(ini.GetDoubleValue("PostProcessing", "LUTStrength", section.lutStrength));
@@ -110,7 +109,6 @@ namespace
         ini.SetDoubleValue("PostProcessing", "HighlightGlow", section.highlightGlow);
         ini.SetBoolValue("PostProcessing", "UnderwaterEffects", section.underwaterEffects);
         ini.SetBoolValue("PostProcessing", "RainDrops", section.rainDrops);
-        ini.SetBoolValue("PostProcessing", "ContactShadows", section.contactShadows);
         ini.SetValue("PostProcessing", "LUT", section.lutName.c_str());
         ini.SetDoubleValue("PostProcessing", "LUTStrength", section.lutStrength);
     }

@@ -3,7 +3,7 @@
 
 cmake_minimum_required(VERSION 3.21)
 
-project(SimpleGraphicsSuite VERSION 1.3.4 LANGUAGES CXX)
+project(SimpleGraphicsSuite VERSION 1.3.5 LANGUAGES CXX)
 
 set(PLUGIN_AUTHOR "RoseEden" CACHE STRING "Author name baked into the plugin declaration")
 
@@ -52,7 +52,6 @@ add_commonlibsse_plugin(
         src/Compatibility.cpp
         src/Config.cpp
         src/DeviceHook.cpp
-        src/FrameBufferCache.cpp
         src/Logging.cpp
         src/NativeMenuIntegration.cpp
         src/PresentHook.cpp

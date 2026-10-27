@@ -1,7 +1,6 @@
 #include "Compatibility.h"
 #include "Config.h"
 #include "DeviceHook.h"
-#include "FrameBufferCache.h"
 #include "Logging.h"
 #include "NativeMenuIntegration.h"
 #include "PresentHook.h"
@@ -47,9 +46,6 @@ namespace
             Accessibility::InstallHooks();
             if (!Compatibility::IsSuppressed(Compatibility::kSoftShadows))
                 SoftShadows::InstallHooks();
-            // Its only reader is DLSS, and support is fixed for the session.
-            if (DLSS::IsSupported())
-                FrameBufferCache::InstallHooks();
 
             // Last, once every module above has registered its callback.
             PresentHook::RegisterPrePresent(OnPrePresent);

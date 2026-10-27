@@ -1,7 +1,6 @@
 #include "DLSS.h"
 
 #include "Config.h"
-#include "FrameBufferCache.h"
 #include "RE/BSGraphics.h"
 #include "Streamline.h"
 
@@ -424,7 +423,12 @@ namespace DLSS
         if (frameCount != g_lastAppliedFrame + 1)
             g_forceReset = true;
 
-        const auto& frame = FrameBufferCache::Get();
+        const auto* cameraState = RE::BSGraphics::FindWorldCameraState(true);
+        const auto  matrices = cameraState ? RE::BSGraphics::GetCameraMatrices(cameraState->view) : std::nullopt;
+        if (!matrices) {
+            SetLastFailureReason("no usable render state for the world camera");
+            return false;
+        }
 
         sl::Constants constants{};
         constants.cameraAspectRatio = static_cast<float>(outWidth) / static_cast<float>(outHeight);
@@ -438,20 +442,22 @@ namespace DLSS
 
         // Streamline uses row vectors, the engine column vectors.
         using DirectX::SimpleMath::Matrix;
-        const Matrix viewInverse = frame.cameraViewInverse.Transpose();
-        const Matrix viewProj = frame.cameraViewProjUnjittered.Transpose();
-        const Matrix viewToClip = viewInverse * viewProj;
+        const Matrix viewProj = matrices->viewProjUnjittered.Transpose();
+        const Matrix viewToClip = matrices->projUnjittered.Transpose();
         // The view is camera-relative.
-        const DirectX::SimpleMath::Vector3 originDelta{ frame.cameraPosAdjust.x - frame.cameraPreviousPosAdjust.x,
-            frame.cameraPosAdjust.y - frame.cameraPreviousPosAdjust.y,
-            frame.cameraPosAdjust.z - frame.cameraPreviousPosAdjust.z };
+        const auto& position = cameraState->posAdjust;
+        const auto& previousPosition = cameraState->previousPosAdjust;
+        const DirectX::SimpleMath::Vector3 originDelta{ position.x - previousPosition.x, position.y - previousPosition.y,
+            position.z - previousPosition.z };
         const Matrix clipToPrevClip = viewProj.Invert() * Matrix::CreateTranslation(originDelta) *
-            frame.cameraPreviousViewProjUnjittered.Transpose();
+            matrices->previousViewProjUnjittered.Transpose();
 
-        constants.cameraRight = { viewInverse._11, viewInverse._12, viewInverse._13 };
-        constants.cameraUp = { viewInverse._21, viewInverse._22, viewInverse._23 };
-        constants.cameraFwd = { viewInverse._31, viewInverse._32, viewInverse._33 };
-        constants.cameraPos = { frame.cameraPosAdjust.x, frame.cameraPosAdjust.y, frame.cameraPosAdjust.z };
+        // A view matrix's rows are the camera's axes.
+        const auto& view = matrices->view;
+        constants.cameraRight = { view._11, view._12, view._13 };
+        constants.cameraUp = { view._21, view._22, view._23 };
+        constants.cameraFwd = { view._31, view._32, view._33 };
+        constants.cameraPos = { position.x, position.y, position.z };
         constants.cameraViewToClip = ToSL(viewToClip);
         constants.clipToCameraView = ToSL(viewToClip.Invert());
         constants.clipToPrevClip = ToSL(clipToPrevClip);
